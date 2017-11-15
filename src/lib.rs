@@ -1,5 +1,5 @@
 #![deny(
-    missing_docs, unused_qualifications,
+    /*missing_docs, */unused_qualifications,
     missing_debug_implementations, missing_copy_implementations,
     trivial_casts, trivial_numeric_casts,
     unsafe_code, unstable_features,
@@ -11,7 +11,7 @@
 //! Implemented with std::hash and linearized tree.
 
 mod hash;
-pub use hash::MHasher;
+pub use hash::MerkleHash;
 
 mod merkle;
 // pub mod merkle::Tree;

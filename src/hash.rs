@@ -1,29 +1,86 @@
-pub use std::hash::Hash;
-use std::hash::Hasher;
+pub trait MerkleHash {
+    fn hash(&self) -> &[u8];
 
-/// Extended std::hash::Hasher for crypto hashes
-pub trait MHasher : Hasher {
-    /// Read full hash result
-    fn read_full(&self) -> [u8];
+    fn reset(&mut self);
 }
 
 #[cfg(test)]
 mod hash_test {
-    use hash::MHasher;
+    use super::MerkleHash;
+    use std::fmt;
+    use std::hash::{Hash,Hasher};
+
+    const SIZE:usize = 0x10;
+
+    struct Xor128 {
+        data: [u8; SIZE],
+        i: usize
+    }
+
+    impl Xor128 {
+        fn new() -> Xor128 {
+            Xor128 {
+                data: [0; SIZE],
+                i: 0
+            }
+        }
+    }
+
+    impl Hasher for Xor128 {
+        fn write(&mut self, bytes: &[u8]) {
+            for x in bytes {
+                self.data[self.i&(SIZE-1)] ^= x;
+                self.i +=1;
+            }
+        }
+
+        fn finish(&self) -> u64 {
+            let mut h : u64 = 0;
+            let mut off : u64 = 0;
+            for i in 0..8 {
+                h |= (self.data[i] as u64) << off;
+                off += 8;
+            }
+            h
+        }
+    }
+
+    impl MerkleHash for Xor128 {
+        fn hash(&self) -> &[u8] {
+            &self.data[..]
+        }
+
+        fn reset(&mut self) {
+            *self = Xor128::new();
+        }
+    }
+
+    impl fmt::UpperHex for Xor128 {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            if f.alternate() {
+                if let Err(e) = f.write_str("0x") {
+                    return Err(e)
+                }
+            }
+            for b in self.hash() {
+                if let Err(e) = write!(f, "{:02X}", b) {
+                    return Err(e)
+                }
+            }
+            Ok(())
+        }
+    }
 
     #[test]
     fn test_hasher_simple() {
-        struct xor128 {
-            data: [u8; 16],
-            i: u64
-        }
-
-        impl Hasher for xor128 {
-
-        }
-
-        impl MHasher for xor128 {
-            fn read_full(&self) -> [u8] {}
-        }
+        let mut h = Xor128::new();
+        "1234567812345678".hash(&mut h);
+        h.reset();
+        String::from("1234567812345678").hash(&mut h);
+        assert_eq!(format!("{:#X}", h), "0xCE323334353637383132333435363738");
+        String::from("1234567812345678").hash(&mut h);
+        assert_eq!(format!("{:#X}", h), "0xF6FC01070103010F090301070103010F");
+        String::from("1234567812345678").hash(&mut h);
+        assert_eq!(format!("{:#X}", h), "0xC1C4CF35323734393E3B303532373439");
     }
 }
