@@ -1,12 +1,88 @@
+//! Hash infrastructure for items in Merkle Tree.
+//!
+//! TODO:
+//! - Algorithm: hash to accept (&[u8])? should it be +Hasher?
+//! - Hash item to be Ord, Copy
+//! - Hash std impl + derive
+
 use std::hash::Hasher;
 
+/// A hashable type.
+///
+/// Types implementing `Hash` are able to be [`hash`]ed with an instance of
+/// [`Hasher`].
+///
+/// ## Implementing `Hash`
+///
+/// You can derive `Hash` with `#[derive(Hash)]` if all fields implement `Hash`.
+/// The resulting hash will be the combination of the values from calling
+/// [`hash`] on each field.
+///
+/// ```
+/// #[derive(Hash)]
+/// struct Rustacean {
+///     name: String,
+///     country: String,
+/// }
+/// ```
+///
+/// If you need more control over how a value is hashed, you can of course
+/// implement the `Hash` trait yourself:
+///
+/// ```
+/// use merkle::hash::Hash;
+///
+/// struct Person {
+///     id: u32,
+///     name: String,
+///     phone: u64,
+/// }
+///
+/// /// where SHA256 : std::hash::Hasher
+/// impl Hash<SHA256> for Person {
+///     fn hash(&self, state: &mut SHA256) {
+///         self.id.hash(state);
+///         self.phone.hash(state);
+///     }
+/// }
+/// ```
+///
+/// ## `Hash` and `Eq`
+///
+/// When implementing both `Hash` and [`Eq`], it is important that the following
+/// property holds:
+///
+/// ```text
+/// k1 == k2 -> hash(k1) == hash(k2)
+/// ```
+///
+/// In other words, if two keys are equal, their hashes must also be equal.
+/// [`HashMap`] and [`HashSet`] both rely on this behavior.
+///
+/// Thankfully, you won't need to worry about upholding this property when
+/// deriving both [`Eq`] and `Hash` with `#[derive(PartialEq, Eq, Hash)]`.
 pub trait Hash<H: Hasher> {
+    /// Feeds this value into the given [`Hasher`].
+    ///
+    /// [`Hasher`]: trait.Hasher.html
     fn hash(&self, state: &mut H);
+
+    /// Feeds a slice of this type into the given [`Hasher`].
+    ///
+    /// [`Hasher`]: trait.Hasher.html
+    fn hash_slice(data: &[Self], state: &mut H)
+        where Self: Sized
+    {
+        for piece in data {
+            piece.hash(state);
+        }
+    }
 }
 
 pub trait Algorithm<T: AsBytes+Sized> : Hasher {
     fn hash(&self) -> T;
 
+    /// Reset Hasher state.
     fn reset(&mut self);
 }
 
