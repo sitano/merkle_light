@@ -11,7 +11,9 @@
 //! Implemented with std::hash and linearized tree.
 
 mod hash;
-pub use hash::MerkleHash;
+pub use hash::Hash;
+pub use hash::AsBytes;
+pub use hash::Algorithm;
 
 mod merkle;
 // pub mod merkle::Tree;

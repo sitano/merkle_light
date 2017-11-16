@@ -1,53 +1,51 @@
-pub trait Hash<T: AsBytes> {
+use std::hash::Hasher;
+
+pub trait Hash<H: Hasher> {
+    fn hash(&self, state: &mut H);
+}
+
+pub trait Algorithm<T: AsBytes+Sized> : Hasher {
     fn hash(&self) -> T;
+
+    fn reset(&mut self);
 }
 
 pub trait AsBytes {
     fn as_bytes(&self) -> &[u8];
 }
 
-impl AsBytes for [u8; 16] {
-    fn as_bytes(&self) -> &[u8] {
-        &self[..]
-    }
-}
-
-impl Hash<[u8; 16]> for String {
-    fn hash(&self) -> [u8; 16] {
-        let mut x = [0u8; 16];
-        x[0] = self.as_bytes()[0];
-        x
-    }
-}
-
-#[derive(Debug, Clone)]
-struct MerkleTree<T> {
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct MerkleTree<T: AsBytes+Sized, A: Algorithm<T>> {
     data: Vec<T>,
+    alg: A,
 }
 
-impl<T : AsBytes> MerkleTree<T> {
-    fn new<U : Hash<T>>(data: &[U]) -> MerkleTree<T> {
-        MerkleTree {
-            data: data.iter().map(|x: &U| x.hash()).collect(),
+impl<T: AsBytes+Sized, A: Algorithm<T>+Hasher> MerkleTree<T, A> {
+    fn new<U: Hash<A>>(data: &[U], alg: A) -> MerkleTree<T, A> {
+        let mut t: MerkleTree<T, A> = MerkleTree {
+            data: Vec::with_capacity(data.len()),
+            alg
+        };
+
+        for i in 0..data.len() {
+            data[i].hash(&mut t.alg);
+            t.data.push(t.alg.hash());
+            t.alg.reset();
         }
+
+        t
     }
-}
-
-pub trait MerkleHash {
-    fn hash(&self) -> &[u8];
-
-    fn reset(&mut self);
 }
 
 #[cfg(test)]
 mod hash_test {
-    use super::MerkleHash;
-    use super::MerkleTree;
+    use super::*;
     use std::fmt;
-    use std::hash::{Hash,Hasher};
+    use std::hash::Hasher;
 
     const SIZE:usize = 0x10;
 
+    #[derive(Debug, Copy, Clone)]
     struct Xor128 {
         data: [u8; SIZE],
         i: usize
@@ -65,7 +63,7 @@ mod hash_test {
     impl Hasher for Xor128 {
         fn write(&mut self, bytes: &[u8]) {
             for x in bytes {
-                self.data[self.i&(SIZE-1)] ^= x;
+                self.data[self.i&(SIZE-1)] ^= *x;
                 self.i +=1;
             }
         }
@@ -81,14 +79,28 @@ mod hash_test {
         }
     }
 
-    impl MerkleHash for Xor128 {
-        fn hash(&self) -> &[u8] {
-            &self.data[..]
+    impl AsBytes for [u8; 16] {
+        fn as_bytes(&self) -> &[u8] {
+            &self[..]
         }
+    }
 
-        fn reset(&mut self) {
-            *self = Xor128::new();
+    impl Hash<Xor128> for str {
+        fn hash(&self, state: &mut Xor128) {
+            state.write(self.as_bytes());
         }
+    }
+
+    impl Hash<Xor128> for String {
+        fn hash(&self, state: &mut Xor128) {
+            state.write(self.as_bytes());
+        }
+    }
+
+    impl Algorithm<[u8; 16]> for Xor128 {
+        fn hash(&self) -> [u8; 16] { self.data }
+
+        fn reset(&mut self) { *self = Xor128::new(); }
     }
 
     impl fmt::UpperHex for Xor128 {
@@ -98,7 +110,7 @@ mod hash_test {
                     return Err(e)
                 }
             }
-            for b in self.hash() {
+            for b in self.data.as_bytes() {
                 if let Err(e) = write!(f, "{:02X}", b) {
                     return Err(e)
                 }
@@ -106,7 +118,7 @@ mod hash_test {
             Ok(())
         }
     }
-
+    
     #[test]
     fn test_hasher_simple() {
         let mut h = Xor128::new();
@@ -123,8 +135,8 @@ mod hash_test {
     #[test]
     fn test_st() {
         let x = [String::from("ars"), String::from("zxc")];
-        let mt = MerkleTree::new(&x);
-        println!("{:?}", mt);
-        println!("{:?}", mt.data.len());
+        let mt = MerkleTree::new(&x, Xor128::new());
+        assert_eq!(format!("{:?}", mt), "MerkleTree { data: [[97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], alg: Xor128 { data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], i: 0 } }");
+        assert_eq!(mt.data.len(), 2);
     }
 }
