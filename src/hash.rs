@@ -1,3 +1,20 @@
+pub trait Hash<T> {
+    fn hash(&self) -> T;
+}
+
+impl Hash<[u8; 16]> for String {
+    fn hash(&self) -> [u8; 16] {
+        let mut x = [0u8; 16];
+        x[0] = self.as_bytes()[0];
+        x
+    }
+}
+
+#[derive(Debug)]
+struct MerkleTree<T> {
+    data: Vec<T>
+}
+
 pub trait MerkleHash {
     fn hash(&self) -> &[u8];
 
@@ -82,5 +99,13 @@ mod hash_test {
         assert_eq!(format!("{:#X}", h), "0xF6FC01070103010F090301070103010F");
         String::from("1234567812345678").hash(&mut h);
         assert_eq!(format!("{:#X}", h), "0xC1C4CF35323734393E3B303532373439");
+    }
+
+    #[test]
+    fn test_st() {
+        let x = [String::from("ars"), String::from("zxc")];
+        let mt = super::new_merkle(&x);
+        println!("{:?}", mt);
+        println!("{:?}", mt.data.len());
     }
 }
