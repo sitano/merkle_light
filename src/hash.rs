@@ -1,5 +1,15 @@
-pub trait Hash<T> {
+pub trait Hash<T: AsBytes> {
     fn hash(&self) -> T;
+}
+
+pub trait AsBytes {
+    fn as_bytes(&self) -> &[u8];
+}
+
+impl AsBytes for [u8; 16] {
+    fn as_bytes(&self) -> &[u8] {
+        &self[..]
+    }
 }
 
 impl Hash<[u8; 16]> for String {
@@ -10,9 +20,17 @@ impl Hash<[u8; 16]> for String {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct MerkleTree<T> {
-    data: Vec<T>
+    data: Vec<T>,
+}
+
+impl<T : AsBytes> MerkleTree<T> {
+    fn new<U : Hash<T>>(data: &[U]) -> MerkleTree<T> {
+        MerkleTree {
+            data: data.iter().map(|x: &U| x.hash()).collect(),
+        }
+    }
 }
 
 pub trait MerkleHash {
@@ -24,6 +42,7 @@ pub trait MerkleHash {
 #[cfg(test)]
 mod hash_test {
     use super::MerkleHash;
+    use super::MerkleTree;
     use std::fmt;
     use std::hash::{Hash,Hasher};
 
@@ -104,7 +123,7 @@ mod hash_test {
     #[test]
     fn test_st() {
         let x = [String::from("ars"), String::from("zxc")];
-        let mt = super::new_merkle(&x);
+        let mt = MerkleTree::new(&x);
         println!("{:?}", mt);
         println!("{:?}", mt.data.len());
     }
