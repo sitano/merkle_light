@@ -22,7 +22,7 @@ impl<T: AsRef<[u8]>+Sized+Ord+Clone, A: Algorithm<T>+Hasher> MerkleTree<T, A> {
         };
 
         for i in 0..data.len() {
-            data[i].hash_state(&mut t.alg);
+            data[i].hash(&mut t.alg);
             t.data.push(t.alg.hash());
             t.alg.reset();
         }

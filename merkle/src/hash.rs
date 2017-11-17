@@ -58,16 +58,16 @@ pub trait Hashable<H: Hasher> {
     /// Feeds this value into the given [`Hasher`].
     ///
     /// [`Hasher`]: trait.Hasher.html
-    fn hash_state(&self, state: &mut H);
+    fn hash(&self, state: &mut H);
 
     /// Feeds a slice of this type into the given [`Hasher`].
     ///
     /// [`Hasher`]: trait.Hasher.html
-    fn hash_slice_state(data: &[Self], state: &mut H)
+    fn hash_slice(data: &[Self], state: &mut H)
         where Self: Sized
     {
         for piece in data {
-            piece.hash_state(state);
+            piece.hash(state);
         }
     }
 }

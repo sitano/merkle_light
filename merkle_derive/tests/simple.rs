@@ -30,6 +30,6 @@ fn test_foo_hash() {
     };
 
     let hr = &mut DefaultHasher::new();
-    foo.hash_state(hr);
+    foo.hash(hr);
     assert_eq!(hr.finish(), 8466196983143881409)
 }

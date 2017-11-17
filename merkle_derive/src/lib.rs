@@ -37,7 +37,7 @@ fn impl_hashable(ast: &syn::DeriveInput) -> quote::Tokens {
             use merkle::hash::Hashable;
 
             impl<H: Hasher> Hashable<H> for #name {
-                fn hash_state(&self, state: &mut H) {
+                fn hash(&self, state: &mut H) {
                     #(#stmts)*
                 }
             }
@@ -66,7 +66,7 @@ fn hash_field(index: usize, f: &syn::Field) -> quote::Tokens {
     }
 
     match f.ident {
-        Some(ref ident) => quote! { self.#ident.hash_state(state); },
-        None => quote! { self.#index.hash_state(state); },
+        Some(ref ident) => quote! { self.#ident.hash(state); },
+        None => quote! { self.#index.hash(state); },
     }
 }

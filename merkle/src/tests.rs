@@ -66,13 +66,13 @@ impl fmt::UpperHex for XOR128 {
 #[test]
 fn test_hasher_simple() {
     let mut h = XOR128::new();
-    "1234567812345678".hash_state(&mut h);
+    "1234567812345678".hash(&mut h);
     h.reset();
-    String::from("1234567812345678").hash_state(&mut h);
+    String::from("1234567812345678").hash(&mut h);
     assert_eq!(format!("{:#X}", h), "0x31323334353637383132333435363738");
-    String::from("1234567812345678").hash_state(&mut h);
+    String::from("1234567812345678").hash(&mut h);
     assert_eq!(format!("{:#X}", h), "0x00000000000000000000000000000000");
-    String::from("1234567812345678").hash_state(&mut h);
+    String::from("1234567812345678").hash(&mut h);
     assert_eq!(format!("{:#X}", h), "0x31323334353637383132333435363738");
 }
 
