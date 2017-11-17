@@ -41,24 +41,6 @@ impl Hasher for XOR128 {
     }
 }
 
-impl AsBytes for [u8; 16] {
-    fn as_bytes(&self) -> &[u8] {
-        &self[..]
-    }
-}
-
-impl Hashable<XOR128> for str {
-    fn hash(&self, state: &mut XOR128) {
-        state.write(self.as_bytes());
-    }
-}
-
-impl Hashable<XOR128> for String {
-    fn hash(&self, state: &mut XOR128) {
-        state.write(self.as_bytes());
-    }
-}
-
 impl Algorithm<[u8; 16]> for XOR128 {
     fn hash(&self) -> [u8; 16] { self.data }
 
@@ -72,7 +54,7 @@ impl fmt::UpperHex for XOR128 {
                 return Err(e)
             }
         }
-        for b in self.data.as_bytes() {
+        for b in self.data.as_ref() {
             if let Err(e) = write!(f, "{:02X}", b) {
                 return Err(e)
             }
@@ -87,17 +69,17 @@ fn test_hasher_simple() {
     "1234567812345678".hash(&mut h);
     h.reset();
     String::from("1234567812345678").hash(&mut h);
-    assert_eq!(format!("{:#X}", h), "0xCE323334353637383132333435363738");
+    assert_eq!(format!("{:#X}", h), "0x31323334353637383132333435363738");
     String::from("1234567812345678").hash(&mut h);
-    assert_eq!(format!("{:#X}", h), "0xF6FC01070103010F090301070103010F");
+    assert_eq!(format!("{:#X}", h), "0x00000000000000000000000000000000");
     String::from("1234567812345678").hash(&mut h);
-    assert_eq!(format!("{:#X}", h), "0xC1C4CF35323734393E3B303532373439");
+    assert_eq!(format!("{:#X}", h), "0x31323334353637383132333435363738");
 }
 
 #[test]
 fn test_st() {
     let x = [String::from("ars"), String::from("zxc")];
     let mt = MerkleTree::new(&x, XOR128::new());
-    assert_eq!(format!("{:?}", mt), "MerkleTree { data: [[97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], alg: Xor128 { data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], i: 0 } }");
-    assert_eq!(mt.data.len(), 2);
+    assert_eq!(format!("{:?}", mt), "MerkleTree { data: [[97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], olen: 2, alg: XOR128 { data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], i: 0 } }");
+    assert_eq!(mt.olen(), 2);
 }

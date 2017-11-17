@@ -1,6 +1,5 @@
 //! Hash infrastructure for items in Merkle Tree.
 //!
-//! - TODO replace AsBytes() with AsRef<[u8]>?
 //! - TODO alg hash(&[u8])
 //! - TODO implement #[derive(Hashable<X>)] with [`proc_macro_derive`] as in https://github.com/paritytech/parity-bitcoin/blob/88fdfb3c085ddd2449bde89e4072fcf9f67de0b5/serialization_derive/src/lib.rs
 
@@ -79,22 +78,11 @@ pub trait Hashable<H: Hasher> {
 /// Algorithm conforms standard [`Hasher`] trait and provides methods to return
 /// full length hash and reset current state.
 pub trait Algorithm<T> : Hasher
-    where T: AsBytes+Sized+Ord+Clone {
+    where T: AsRef<[u8]> {
 
     /// Returns the hash value for the data stream written so far.
     fn hash(&self) -> T;
 
     /// Reset Hasher state.
     fn reset(&mut self);
-}
-
-/// Bytes interface to the hash item.
-///
-/// Exists to the lack of [`const_generics`] and _unsafe_ [`FixedSizeArray`],
-/// [`Unsize`].
-///
-/// It may be removed in place of AsRef<[u8]>
-pub trait AsBytes {
-    /// Represent a hash item as a sequence of bytes.
-    fn as_bytes(&self) -> &[u8];
 }

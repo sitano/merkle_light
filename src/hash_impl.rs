@@ -48,7 +48,14 @@ impl<H: Hasher> Hashable<H> for char {
 impl<H: Hasher> Hashable<H> for str {
     fn hash(&self, state: &mut H) {
         state.write(self.as_bytes());
-        state.write_u8(0xff)
+        // empty str nope: state.write_u8(0xff)
+    }
+}
+
+impl<H: Hasher> Hashable<H> for String {
+    fn hash(&self, state: &mut H) {
+        state.write(self.as_bytes());
+        // empty str nope: state.write_u8(0xff)
     }
 }
 
