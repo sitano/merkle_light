@@ -1,0 +1,24 @@
+[package]
+name = "merkle_derive"
+version = "0.1.0"
+authors = [
+  "Ivan Prisyazhnyy <john.koepi@gmail.com>"
+]
+
+description   = "#[derive(Hashable<T>)] Merkle tree implementation"
+license       = "BSD-3-Clause"
+homepage      = "https://github.com/sitano/merkle.rs"
+repository    = "https://github.com/sitano/merkle.rs"
+readme        = "README.md"
+keywords      = ["merkle", "merkle-tree"]
+categories    = ["data-structures", "cryptography"]
+
+[lib]
+name = "merkle_derive"
+proc-macro = true
+
+[dependencies]
+syn = "0.11.11"
+quote = "0.3.15"
+merkle = { path = "../merkle" }
+

@@ -32,7 +32,7 @@
 //!
 //! `Object : Hashable<H> -> Hasher + Algorithm <- Merkle Tree`
 //!
-//! Custom [`merkle::hash::Hashable`] trait provided to allow implementations differ
+//! Custom [`merkle::hash::Hashable`] trait allows implementations differ
 //! from [`std::collection`] related hashes, different implementations for
 //! different hashing algorithms / schemas and conforms object-safety trait rules.
 //!
@@ -61,7 +61,7 @@
 pub mod hash;
 
 /// Common implementations for [`Hashable`].
-pub mod hash_impl;
+mod hash_impl;
 
 /// Merkle Tree abstractions, implementation and algorithms.
 pub mod merkle;

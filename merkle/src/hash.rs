@@ -1,6 +1,6 @@
 //! Hash infrastructure for items in Merkle Tree.
 //!
-//! - TODO implement #[derive(Hashable<X>)] with [`proc_macro_derive`] as in https://github.com/paritytech/parity-bitcoin/blob/88fdfb3c085ddd2449bde89e4072fcf9f67de0b5/serialization_derive/src/lib.rs
+//! - TODO extract Alg utils into separate trait
 
 use std::hash::Hasher;
 
@@ -15,21 +15,18 @@ use std::hash::Hasher;
 /// The resulting hash will be the combination of the values from calling
 /// [`hash`] on each field.
 ///
-/// ```
-/// /*
+/// ```text
 /// #[derive(Hashable)]
 /// struct Rustacean {
 ///     name: String,
 ///     country: String,
 /// }
-/// */
 /// ```
 ///
 /// If you need more control over how a value is hashed, you can of course
 /// implement the `Hashable` trait yourself:
 ///
-/// ```
-/// /*
+/// ```text
 /// use hash::Hashable;
 ///
 /// struct Person {
@@ -45,7 +42,6 @@ use std::hash::Hasher;
 ///         self.phone.hash(state);
 ///     }
 /// }
-/// */
 /// ```
 ///
 /// ## `Hashable` and `Eq`
@@ -62,16 +58,16 @@ pub trait Hashable<H: Hasher> {
     /// Feeds this value into the given [`Hasher`].
     ///
     /// [`Hasher`]: trait.Hasher.html
-    fn hash(&self, state: &mut H);
+    fn hash_state(&self, state: &mut H);
 
     /// Feeds a slice of this type into the given [`Hasher`].
     ///
     /// [`Hasher`]: trait.Hasher.html
-    fn hash_slice(data: &[Self], state: &mut H)
+    fn hash_slice_state(data: &[Self], state: &mut H)
         where Self: Sized
     {
         for piece in data {
-            piece.hash(state);
+            piece.hash_state(state);
         }
     }
 }

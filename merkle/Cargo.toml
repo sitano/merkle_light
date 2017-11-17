@@ -1,0 +1,17 @@
+[package]
+name = "merkle"
+version = "0.1.0"
+authors = [
+  "Ivan Prisyazhnyy <john.koepi@gmail.com>"
+]
+
+description   = "Merkle tree implementation with support for generation of inclusion proofs."
+license       = "BSD-3-Clause"
+homepage      = "https://github.com/sitano/merkle.rs"
+repository    = "https://github.com/sitano/merkle.rs"
+readme        = "README.md"
+keywords      = ["merkle", "merkle-tree"]
+categories    = ["data-structures", "cryptography"]
+
+[dependencies]
+
