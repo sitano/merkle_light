@@ -1,6 +1,5 @@
 //! Hash infrastructure for items in Merkle Tree.
 //!
-//! - TODO alg hash(&[u8])
 //! - TODO implement #[derive(Hashable<X>)] with [`proc_macro_derive`] as in https://github.com/paritytech/parity-bitcoin/blob/88fdfb3c085ddd2449bde89e4072fcf9f67de0b5/serialization_derive/src/lib.rs
 
 use std::hash::Hasher;
@@ -17,18 +16,21 @@ use std::hash::Hasher;
 /// [`hash`] on each field.
 ///
 /// ```
+/// /*
 /// #[derive(Hashable)]
 /// struct Rustacean {
 ///     name: String,
 ///     country: String,
 /// }
+/// */
 /// ```
 ///
 /// If you need more control over how a value is hashed, you can of course
 /// implement the `Hashable` trait yourself:
 ///
 /// ```
-/// use merkle::hash::Hashable;
+/// /*
+/// use hash::Hashable;
 ///
 /// struct Person {
 ///     id: u32,
@@ -43,6 +45,7 @@ use std::hash::Hasher;
 ///         self.phone.hash(state);
 ///     }
 /// }
+/// */
 /// ```
 ///
 /// ## `Hashable` and `Eq`
@@ -78,11 +81,40 @@ pub trait Hashable<H: Hasher> {
 /// Algorithm conforms standard [`Hasher`] trait and provides methods to return
 /// full length hash and reset current state.
 pub trait Algorithm<T> : Hasher
-    where T: AsRef<[u8]> {
+    where T: AsRef<[u8]>+Sized+Ord+Clone {
+
+    /// MT leaf hash prefix
+    const LEAF : u8 = 0x00;
+
+    /// MT interior node hash prefix
+    const INTERIOR : u8 = 0x01;
 
     /// Returns the hash value for the data stream written so far.
     fn hash(&self) -> T;
 
     /// Reset Hasher state.
     fn reset(&mut self);
+
+    /// Returns digest of the empty thing.
+    fn empty(&mut self) -> T {
+        self.reset();
+        self.hash()
+    }
+
+    /// Returns the hash value for MT leaf (prefix 0x00).
+    fn leaf(&mut self, leaf: T) -> T {
+        self.reset();
+        self.write_u8(Self::LEAF);
+        self.write(leaf.as_ref());
+        self.hash()
+    }
+
+    /// Returns the hash value for MT interior node (prefix 0x01).
+    fn node(&mut self, left: T, right: T) -> T {
+        self.reset();
+        self.write_u8(Self::INTERIOR);
+        self.write(left.as_ref());
+        self.write(right.as_ref());
+        self.hash()
+    }
 }

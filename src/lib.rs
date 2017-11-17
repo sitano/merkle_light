@@ -10,13 +10,11 @@
 //! This tree implementation uses encoding scheme as in _Certificate Transparency_
 //! RFC 6962 (https://tools.ietf.org/html/rfc6962):
 //!
-//! ```
-//! MTH({d(0)}) = ALG(0x00 || d(0)).
-//! For n > 1, let k be the largest power of two smaller than n (i.e.,
-//! k < n <= 2k).  The Merkle Tree Hash of an n-element list D[n] is then
-//! defined recursively as
-//! MTH(D[n]) = ALG(0x01 || MTH(D[0:k]) || MTH(D[k:n])),
-//! ```
+//! > MTH({d(0)}) = ALG(0x00 || d(0)).
+//! > For n > 1, let k be the largest power of two smaller than n (i.e.,
+//! > k < n <= 2k).  The Merkle Tree Hash of an n-element list D[n] is then
+//! > defined recursively as
+//! > MTH(D[n]) = ALG(0x01 || MTH(D[0:k]) || MTH(D[k:n])),
 //!
 //! Link: https://en.wikipedia.org/wiki/Merkle_tree
 //!
@@ -30,21 +28,11 @@
 //! Standard way in Rust is to hash objects with a std::hash::Hasher, and mainly
 //! that is the reason behind the choice of the abstractions:
 //!
-//! ```
-//!     Object : Hashable<H> -> Hasher + Algorithm <- Merkle Tree
-//! ```
+//! `Object : Hashable<H> -> Hasher + Algorithm <- Merkle Tree`
 //!
 //! Custom [`merkle::hash::Hashable`] trait provided to allow implementations differ
 //! from [`std::collection`] related hashes, different implementations for
 //! different hashing algorithms / schemas and conforms object-safety trait rules.
-//!
-//! Big issue is missing [`const_generics`] feature implemented in the compiler,
-//! and I didn't want to use unsafe [`FixedSizeArray<T>`], so there is just 1
-//! additional trait to bypass this limitation until dependent types will be
-//! implemented.
-//!
-//! [`const_generics`]: generic_const
-//! [`FixedSizeArray<T>`]: https://github.com/rust-lang/rust/issues/27778
 //!
 //! [`Algorithm`] complements [`Hasher`] to be reusable and follows the idea
 //! that the result hash is a mapping of the data stream.
