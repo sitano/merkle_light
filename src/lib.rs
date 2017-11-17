@@ -31,14 +31,14 @@
 //! that is the reason behind the choice of the abstractions:
 //!
 //! ```
-//!     Object : Hash<H> -> Hasher + Algorithm <- Merkle Tree
+//!     Object : Hashable<H> -> Hasher + Algorithm <- Merkle Tree
 //! ```
 //!
-//! Custom [`merkle::hash::Hash`] trait provided to allow implementations differ
+//! Custom [`merkle::hash::Hashable`] trait provided to allow implementations differ
 //! from [`std::collection`] related hashes, different implementations for
-//! different hashing algorithms / schemas.
+//! different hashing algorithms / schemas and conforms object-safety trait rules.
 //!
-//! Big issue was missing [`const_generics`] feature implemented in the compiler,
+//! Big issue is missing [`const_generics`] feature implemented in the compiler,
 //! and I didn't want to use unsafe [`FixedSizeArray<T>`], so there is just 1
 //! additional trait to bypass this limitation until dependent types will be
 //! implemented.
@@ -46,10 +46,8 @@
 //! [`const_generics`]: generic_const
 //! [`FixedSizeArray<T>`]: https://github.com/rust-lang/rust/issues/27778
 //!
-//! I would like to remove [`AsBytes`] trait, but [`Unsize`] is unsafe, so its a
-//! decent replacement.
-//!
-//! [`Unsize`]: https://doc.rust-lang.org/std/marker/trait.Unsize.html
+//! [`Algorithm`] complements [`Hasher`] to be reusable and follows the idea
+//! that the result hash is a mapping of the data stream.
 //!
 //! # Interface
 //! - eval tree (items) -> tree
@@ -72,5 +70,12 @@
 /// Hash infrastructure for items in Merkle Tree.
 pub mod hash;
 
+/// Common implementations for [`Hashable`].
+pub mod hash_impl;
+
 /// Merkle Tree abstractions, implementation and algorithms.
 pub mod merkle;
+
+/// Tests with XOR128 example.
+#[cfg(test)]
+mod tests;
