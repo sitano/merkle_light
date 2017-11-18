@@ -1,4 +1,5 @@
 use hash::{Hashable, Algorithm};
+use merkle_hash::MerkleHasher;
 use std::hash::Hasher;
 
 /// Merkle Tree.
@@ -23,7 +24,9 @@ impl<T: AsRef<[u8]>+Sized+Ord+Clone, A: Algorithm<T>+Hasher> MerkleTree<T, A> {
 
         for i in 0..data.len() {
             data[i].hash(&mut t.alg);
-            t.data.push(t.alg.hash());
+            let h = t.alg.hash();
+
+            t.data.push(t.alg.leaf(h));
             t.alg.reset();
         }
 

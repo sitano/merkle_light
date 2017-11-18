@@ -80,6 +80,6 @@ fn test_hasher_simple() {
 fn test_st() {
     let x = [String::from("ars"), String::from("zxc")];
     let mt = MerkleTree::new(&x, XOR128::new());
-    assert_eq!(format!("{:?}", mt), "MerkleTree { data: [[97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], olen: 2, alg: XOR128 { data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], i: 0 } }");
+    assert_eq!(format!("{:?}", mt), "MerkleTree { data: [[0, 97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], olen: 2, alg: XOR128 { data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], i: 0 } }");
     assert_eq!(mt.olen(), 2);
 }

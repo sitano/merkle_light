@@ -1,6 +1,4 @@
 //! Hash infrastructure for items in Merkle Tree.
-//!
-//! - TODO extract Alg utils into separate trait
 
 use std::hash::Hasher;
 
@@ -79,38 +77,9 @@ pub trait Hashable<H: Hasher> {
 pub trait Algorithm<T> : Hasher
     where T: AsRef<[u8]>+Sized+Ord+Clone {
 
-    /// MT leaf hash prefix
-    const LEAF : u8 = 0x00;
-
-    /// MT interior node hash prefix
-    const INTERIOR : u8 = 0x01;
-
     /// Returns the hash value for the data stream written so far.
     fn hash(&self) -> T;
 
     /// Reset Hasher state.
     fn reset(&mut self);
-
-    /// Returns digest of the empty thing.
-    fn empty(&mut self) -> T {
-        self.reset();
-        self.hash()
-    }
-
-    /// Returns the hash value for MT leaf (prefix 0x00).
-    fn leaf(&mut self, leaf: T) -> T {
-        self.reset();
-        self.write_u8(Self::LEAF);
-        self.write(leaf.as_ref());
-        self.hash()
-    }
-
-    /// Returns the hash value for MT interior node (prefix 0x01).
-    fn node(&mut self, left: T, right: T) -> T {
-        self.reset();
-        self.write_u8(Self::INTERIOR);
-        self.write(left.as_ref());
-        self.write(right.as_ref());
-        self.hash()
-    }
 }

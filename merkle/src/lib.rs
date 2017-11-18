@@ -63,6 +63,9 @@ pub mod hash;
 /// Common implementations for [`Hashable`].
 mod hash_impl;
 
+/// Merkle Tree hash helpers for [`Algorithm`] trait.
+mod merkle_hash;
+
 /// Merkle Tree abstractions, implementation and algorithms.
 pub mod merkle;
 
