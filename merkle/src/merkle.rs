@@ -46,6 +46,8 @@ use std::hash::Hasher;
 pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone, A: Algorithm<T>> {
     data: Vec<T>,
     olen: usize,
+    leafs: usize,
+    height: usize,
     alg: A,
     h0: T,
 }
@@ -68,6 +70,8 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone, A: Algorithm<T> + Hasher> MerkleTree<
         let mut mt: MerkleTree<T, A> = MerkleTree {
             data: Vec::with_capacity(size),
             olen: data.len(),
+            leafs: pow,
+            height: 1+pow.trailing_zeros() as usize,
             alg,
             h0,
         };
@@ -94,6 +98,8 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone, A: Algorithm<T> + Hasher> MerkleTree<
         let mut mt: MerkleTree<T, A> = MerkleTree {
             data: Vec::with_capacity(size),
             olen: data.len(),
+            leafs: pow,
+            height: 1+pow.trailing_zeros() as usize,
             alg,
             h0,
         };
@@ -142,6 +148,11 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone, A: Algorithm<T> + Hasher> MerkleTree<
         }
     }
 
+    /// Returns merkle root
+    pub fn root(&self) -> T {
+        self.data[self.data.len() - 1].clone()
+    }
+
     /// Returns original number of elements the tree was built upon.
     pub fn olen(&self) -> usize {
         self.olen
@@ -150,6 +161,16 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone, A: Algorithm<T> + Hasher> MerkleTree<
     /// Returns number of elements in the tree.
     pub fn len(&self) -> usize {
         self.data.len()
+    }
+
+    /// Returns height of the tree
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    /// Returns count of leafs in the tree
+    pub fn leafs(&self) -> usize {
+        self.leafs
     }
 
     /// next_pow2 returns next highest power of two from a given number if
