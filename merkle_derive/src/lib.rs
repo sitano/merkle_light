@@ -2,7 +2,7 @@ extern crate proc_macro;
 extern crate syn;
 #[macro_use]
 extern crate quote;
-extern crate merkle;
+extern crate merkle_light;
 
 use proc_macro::TokenStream;
 
@@ -35,10 +35,10 @@ fn impl_hashable(ast: &syn::DeriveInput) -> quote::Tokens {
 
     quote! {
         const #dummy_const: () = {
-            extern crate merkle;
+            extern crate merkle_light;
 
             use std::hash::Hasher;
-            use merkle::hash::Hashable;
+            use merkle_light::hash::Hashable;
 
             impl<H: Hasher> Hashable<H> for #name {
                 fn hash(&self, state: &mut H) {

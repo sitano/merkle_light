@@ -68,7 +68,7 @@ impl fmt::UpperHex for XOR128 {
 }
 
 #[test]
-fn test_hasher_simple() {
+fn test_hasher_light() {
     let mut h = XOR128::new();
     "1234567812345678".hash(&mut h);
     h.reset();

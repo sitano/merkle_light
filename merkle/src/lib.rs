@@ -1,4 +1,4 @@
-//! Simple _Merkle Tree_ implementation.
+//! light _Merkle Tree_ implementation.
 //!
 //! Merkle Tree (MT) implemented as a full binary tree allocated as a vec
 //! of statically sized hashes to give hashes more locality. MT specialized
