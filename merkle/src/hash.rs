@@ -84,7 +84,8 @@ pub trait Hashable<H: Hasher> {
     ///
     /// [`Hasher`]: trait.Hasher.html
     fn hash_slice(data: &[Self], state: &mut H)
-        where Self: Sized
+    where
+        Self: Sized,
     {
         for piece in data {
             piece.hash(state);
@@ -96,9 +97,10 @@ pub trait Hashable<H: Hasher> {
 ///
 /// Algorithm conforms standard [`Hasher`] trait and provides methods to return
 /// full length hash and reset current state.
-pub trait Algorithm<T> : Hasher
-    where T: AsRef<[u8]>+Sized+Ord+Clone {
-
+pub trait Algorithm<T>: Hasher
+where
+    T: AsRef<[u8]> + Sized + Ord + Clone,
+{
     /// Returns the hash value for the data stream written so far.
     fn hash(&self) -> T;
 

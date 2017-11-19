@@ -21,8 +21,12 @@ fn impl_hashable(ast: &syn::DeriveInput) -> quote::Tokens {
     };
 
     let stmts: Vec<_> = match *body {
-        syn::VariantData::Struct(ref fields) => fields.iter().enumerate().map(hash_field_map).collect(),
-        syn::VariantData::Tuple(ref fields) => fields.iter().enumerate().map(hash_field_map).collect(),
+        syn::VariantData::Struct(ref fields) => {
+            fields.iter().enumerate().map(hash_field_map).collect()
+        }
+        syn::VariantData::Tuple(ref fields) => {
+            fields.iter().enumerate().map(hash_field_map).collect()
+        }
         syn::VariantData::Unit => panic!("#[derive(Hashable)] is not defined for Unit structs."),
     };
 
@@ -55,7 +59,9 @@ fn hash_field(index: usize, f: &syn::Field) -> quote::Tokens {
     loop {
         match ty {
             syn::Ty::Path(_, ref path) => {
-                path.segments.first().expect("there must be at least 1 segment");
+                path.segments.first().expect(
+                    "there must be at least 1 segment",
+                );
                 break;
             }
             syn::Ty::Rptr(_, bty) => {

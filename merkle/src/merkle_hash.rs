@@ -1,15 +1,16 @@
 use hash::Algorithm;
 
 /// MT leaf hash prefix
-const LEAF : u8 = 0x00;
+const LEAF: u8 = 0x00;
 
 /// MT interior node hash prefix
-const INTERIOR : u8 = 0x01;
+const INTERIOR: u8 = 0x01;
 
 /// MT hash helper
 pub trait MerkleHasher<T>
-    where T: AsRef<[u8]>+Sized+Ord+Clone {
-
+where
+    T: AsRef<[u8]> + Sized + Ord + Clone,
+{
     /// Returns digest of the empty thing.
     fn empty(&mut self) -> T;
 
@@ -21,8 +22,10 @@ pub trait MerkleHasher<T>
 }
 
 impl<T, A> MerkleHasher<T> for A
-    where T: AsRef<[u8]>+Sized+Ord+Clone, A: Algorithm<T> {
-
+where
+    T: AsRef<[u8]> + Sized + Ord + Clone,
+    A: Algorithm<T>,
+{
     fn empty(&mut self) -> T {
         self.reset();
         self.hash()

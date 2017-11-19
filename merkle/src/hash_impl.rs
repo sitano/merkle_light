@@ -36,7 +36,9 @@ impl_write! {
 }
 
 impl<H: Hasher> Hashable<H> for bool {
-    fn hash(&self, state: &mut H) { state.write_u8(*self as u8) }
+    fn hash(&self, state: &mut H) {
+        state.write_u8(*self as u8)
+    }
 }
 
 impl<H: Hasher> Hashable<H> for char {
@@ -67,7 +69,10 @@ macro_rules! impl_hash_tuple {
     );
 
     ( $($name:ident)+) => (
-        impl<Z: Hasher, $($name: Hashable<Z>),*> Hashable<Z> for ($($name,)*) where last_type!($($name,)+): ?Sized {
+        impl<Z: Hasher, $($name: Hashable<Z>),*> Hashable<Z> for ($($name,)*)
+        where
+            last_type!($($name,)+): ?Sized
+        {
             #[allow(non_snake_case)]
             fn hash(&self, state: &mut Z) {
                 let ($(ref $name,)*) = *self;
@@ -82,7 +87,7 @@ macro_rules! last_type {
     ($a:ident, $($rest_a:ident,)+) => { last_type!($($rest_a,)+) };
 }
 
-impl_hash_tuple! {}
+impl_hash_tuple!{}
 impl_hash_tuple! { A }
 impl_hash_tuple! { A B }
 impl_hash_tuple! { A B C }
@@ -123,9 +128,7 @@ impl<H: Hasher, T: ?Sized> Hashable<H> for *const T {
             state.write_usize(*self as *const () as usize);
         } else {
             // Fat pointer
-            let (a, b) = unsafe {
-                *(self as *const Self as *const (usize, usize))
-            };
+            let (a, b) = unsafe { *(self as *const Self as *const (usize, usize)) };
             state.write_usize(a);
             state.write_usize(b);
         }
@@ -140,9 +143,7 @@ impl<H: Hasher, T: ?Sized> Hashable<H> for *mut T {
             state.write_usize(*self as *const () as usize);
         } else {
             // Fat pointer
-            let (a, b) = unsafe {
-                *(self as *const Self as *const (usize, usize))
-            };
+            let (a, b) = unsafe { *(self as *const Self as *const (usize, usize)) };
             state.write_usize(a);
             state.write_usize(b);
         }
