@@ -15,3 +15,5 @@ categories    = ["data-structures", "cryptography"]
 
 [dependencies]
 
+[dev-dependencies]
+merkle_derive = { path = "../merkle_derive" }

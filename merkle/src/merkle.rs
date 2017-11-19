@@ -5,6 +5,10 @@ use std::hash::Hasher;
 /// Merkle Tree.
 ///
 /// All leafs and nodes stored sequential.
+///
+/// TODO: from
+/// TODO: from_t, from_u
+/// TODO: indexer
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: AsRef<[u8]>+Sized+Ord+Clone, A: Algorithm<T>> {
     data: Vec<T>,

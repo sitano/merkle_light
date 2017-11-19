@@ -13,32 +13,54 @@ use std::hash::Hasher;
 /// The resulting hash will be the combination of the values from calling
 /// [`hash`] on each field.
 ///
-/// ```text
-/// #[derive(Hashable)]
-/// struct Rustacean {
-///     name: String,
-///     country: String,
+/// ```
+/// #[macro_use]
+/// extern crate merkle_derive;
+/// extern crate merkle;
+/// use merkle::hash::Hashable;
+///
+/// fn main() {
+///     #[derive(Hashable)]
+///     struct Foo {
+///         name: String,
+///         country: String,
+///     }
 /// }
 /// ```
 ///
 /// If you need more control over how a value is hashed, you can of course
 /// implement the `Hashable` trait yourself:
 ///
-/// ```text
-/// use hash::Hashable;
+/// ```
+/// extern crate merkle;
+/// use merkle::hash::Hashable;
+/// use std::hash::Hasher;
+/// use std::collections::hash_map::DefaultHasher;
 ///
-/// struct Person {
-///     id: u32,
-///     name: String,
-///     phone: u64,
-/// }
+/// fn main() {
+///    struct Person {
+///        id: u32,
+///        name: String,
+///        phone: u64,
+///    }
 ///
-/// /// where SHA256 : std::hash::Hasher
-/// impl Hashable<SHA256> for Person {
-///     fn hash(&self, state: &mut SHA256) {
-///         self.id.hash(state);
-///         self.phone.hash(state);
-///     }
+///    impl<H: Hasher> Hashable<H> for Person {
+///        fn hash(&self, state: &mut H) {
+///            self.id.hash(state);
+///            self.name.hash(state);
+///            self.phone.hash(state);
+///        }
+///    }
+///
+///    let foo = Person{
+///        id: 1,
+///        name: String::from("blah"),
+///        phone: 2,
+///    };
+///
+///    let hr = &mut DefaultHasher::new();
+///    foo.hash(hr);
+///    assert_eq!(hr.finish(), 7101638158313343130)
 /// }
 /// ```
 ///
