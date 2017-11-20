@@ -49,64 +49,25 @@ pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorit
     alg: A,
 }
 
-impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher> MerkleTree<T, A> {
+impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + Clone> MerkleTree<T, A> {
     /// Creates new merkle from a sequence of hashes.
     pub fn new(data: &[T], alg: A) -> MerkleTree<T, A> {
         Self::from_hash(data, alg)
     }
 
     /// Creates new merkle from a sequence of hashes.
-    /// TODO: smart into iter conv &[T], IntoIter<Item=&T> -> IntoIter<Item=T>?
     pub fn from_hash(data: &[T], alg: A) -> MerkleTree<T, A> {
-        debug_assert_ne!(data.len(), 0);
-
-        let pow = Self::next_pow2(data.len());
-        let size = 2 * pow - 1;
-
-        let mut mt: MerkleTree<T, A> = MerkleTree {
-            data: Vec::with_capacity(size),
-            olen: data.len(),
-            leafs: pow,
-            height: 1+pow.trailing_zeros() as usize,
-            alg,
-        };
-
-        // Compute data leafs
-        for item in data {
-            mt.data.push(mt.alg.leaf(item.clone()))
-        }
-
-        mt.build();
-        mt
+        Self::from_iter(data.iter().map(|x| x.clone()), alg)
     }
 
     /// Creates new merkle tree from a list of hashable objects.
-    /// TODO: smart into iter conv &[U], IntoIter<Item=&U> -> IntoIter<Item=T>?
-    pub fn from_data<U: Hashable<A>>(data: &[U], alg: A) -> MerkleTree<T, A> {
-        debug_assert_ne!(data.len(), 0);
-
-        let pow = Self::next_pow2(data.len());
-        let size = 2 * pow - 1;
-
-        let mut mt: MerkleTree<T, A> = MerkleTree {
-            data: Vec::with_capacity(size),
-            olen: data.len(),
-            leafs: pow,
-            height: 1+pow.trailing_zeros() as usize,
-            alg,
-        };
-
-        // Compute data leafs
-        for item in data {
-            mt.alg.reset();
-            item.hash(&mut mt.alg);
-
-            let h = mt.alg.hash();
-            mt.data.push(mt.alg.leaf(h))
-        }
-
-        mt.build();
-        mt
+    pub fn from_data<U: Hashable<A>>(data: &[U], a: A) -> MerkleTree<T, A> {
+        let mut b = a.clone();
+        Self::from_iter(data.iter().map(|x| {
+            b.reset();
+            x.hash(&mut b);
+            b.hash()
+        }), a)
     }
 
     /// Creates new merkle tree from an iterator over hashable objects.
