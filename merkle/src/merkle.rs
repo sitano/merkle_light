@@ -37,10 +37,9 @@ use std::hash::Hasher;
 /// will be nil.
 ///
 /// TODO: From<> trait impl?
-/// TODO: FromIter<> trait impl?
 /// TODO: Index<t>
-/// TODO: IntoIter
 /// TODO: Ord, Eq
+/// TODO: Proof/ SPVЗ
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T>> {
     data: Vec<T>,
@@ -51,12 +50,12 @@ pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorit
 }
 
 impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher> MerkleTree<T, A> {
-    /// Creates a new merkle from a sequence of hashes.
+    /// Creates new merkle from a sequence of hashes.
     pub fn new(data: &[T], alg: A) -> MerkleTree<T, A> {
         Self::from_hash(data, alg)
     }
 
-    /// Creates a new merkle from a sequence of hashes.
+    /// Creates new merkle from a sequence of hashes.
     pub fn from_hash(data: &[T], alg: A) -> MerkleTree<T, A> {
         debug_assert_ne!(data.len(), 0);
 
@@ -80,24 +79,34 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher> M
         mt
     }
 
-    /// Creates a new merkle tree hashable objects.
+    /// Creates new merkle tree from a list of hashable objects.
     /// TODO: reuse FromIter impl and map..collect
     pub fn from_data<U: Hashable<A>>(data: &[U], alg: A) -> MerkleTree<T, A> {
-        debug_assert_ne!(data.len(), 0);
+        Self::from_iter(data, alg)
+    }
 
-        let pow = Self::next_pow2(data.len());
+    /// Creates new merkle tree from an iterator over hashable objects.
+    pub fn from_iter<U: Hashable<A>, I: IntoIterator<Item=U>>(into: I, alg: A) -> MerkleTree<T, A> {
+        let iter = into.into_iter();
+        let iter_count = match iter.size_hint().1 {
+            Some(e) => {e},
+            None => panic!("not supported / not implemented"),
+        };
+        debug_assert_ne!(iter_count, 0);
+
+        let pow = Self::next_pow2(iter_count);
         let size = 2 * pow - 1;
 
         let mut mt: MerkleTree<T, A> = MerkleTree {
             data: Vec::with_capacity(size),
-            olen: data.len(),
+            olen: iter_count,
             leafs: pow,
             height: 1+pow.trailing_zeros() as usize,
             alg,
         };
 
         // compute leafs
-        for item in data {
+        for item in iter {
             mt.alg.reset();
             item.hash(&mut mt.alg);
 
