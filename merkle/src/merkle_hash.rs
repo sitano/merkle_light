@@ -23,7 +23,7 @@ where
 
 impl<T, A> MerkleHasher<T> for A
 where
-    T: AsRef<[u8]> + Sized + Ord + Clone,
+    T: AsRef<[u8]> + Sized + Ord + Clone + Default,
     A: Algorithm<T>,
 {
     fn empty(&mut self) -> T {

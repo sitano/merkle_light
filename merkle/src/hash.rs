@@ -96,10 +96,14 @@ pub trait Hashable<H: Hasher> {
 /// Hashing algorithm type.
 ///
 /// Algorithm conforms standard [`Hasher`] trait and provides methods to return
-/// full length hash and reset current state.
+/// hash and resetting current state.
+///
+/// T is a hash item must be of known size at compile time, globally ordered, with
+/// default value as a neutral element of the hash space. Neutral element is
+/// interpreted as 0 or nil and required for evaluation of merkle tree.
 pub trait Algorithm<T>: Hasher
 where
-    T: AsRef<[u8]> + Sized + Ord + Clone,
+    T: AsRef<[u8]> + Sized + Ord + Clone + Default,
 {
     /// Returns the hash value for the data stream written so far.
     fn hash(&self) -> T;
