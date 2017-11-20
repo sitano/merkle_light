@@ -81,7 +81,7 @@ fn test_hasher_light() {
 }
 
 #[test]
-fn test_st() {
+fn test_from_slice() {
     let x = [String::from("ars"), String::from("zxc")];
     let mt = MerkleTree::from_data(&x, XOR128::new());
     assert_eq!(
@@ -99,4 +99,16 @@ fn test_st() {
     assert_eq!(mt.olen(), 2);
     assert_eq!(mt.height(), 2);
     assert_eq!(mt.root(), [1, 0, 27, 10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+}
+
+#[test]
+fn test_from_iter() {
+    let mut a = XOR128::new();
+    let mt = MerkleTree::from_iter(["a", "b", "c"].iter().map(|x| {
+        a.reset();
+        x.hash(&mut a);
+        a.hash()
+    }).collect::<Vec<[u8; 16]>>(), a);
+    assert_eq!(mt.len(), 7);
+    assert_eq!(mt.height(), 3);
 }

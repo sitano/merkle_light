@@ -56,6 +56,7 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher> M
     }
 
     /// Creates new merkle from a sequence of hashes.
+    /// TODO: smart into iter conv &[T], IntoIter<Item=&T> -> IntoIter<Item=T>?
     pub fn from_hash(data: &[T], alg: A) -> MerkleTree<T, A> {
         debug_assert_ne!(data.len(), 0);
 
@@ -71,8 +72,8 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher> M
         };
 
         // Compute data leafs
-        for h in data {
-            mt.data.push(mt.alg.leaf(h.clone()))
+        for item in data {
+            mt.data.push(mt.alg.leaf(item.clone()))
         }
 
         mt.build();
@@ -80,13 +81,36 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher> M
     }
 
     /// Creates new merkle tree from a list of hashable objects.
-    /// TODO: reuse FromIter impl and map..collect
+    /// TODO: smart into iter conv &[U], IntoIter<Item=&U> -> IntoIter<Item=T>?
     pub fn from_data<U: Hashable<A>>(data: &[U], alg: A) -> MerkleTree<T, A> {
-        Self::from_iter(data, alg)
+        debug_assert_ne!(data.len(), 0);
+
+        let pow = Self::next_pow2(data.len());
+        let size = 2 * pow - 1;
+
+        let mut mt: MerkleTree<T, A> = MerkleTree {
+            data: Vec::with_capacity(size),
+            olen: data.len(),
+            leafs: pow,
+            height: 1+pow.trailing_zeros() as usize,
+            alg,
+        };
+
+        // Compute data leafs
+        for item in data {
+            mt.alg.reset();
+            item.hash(&mut mt.alg);
+
+            let h = mt.alg.hash();
+            mt.data.push(mt.alg.leaf(h))
+        }
+
+        mt.build();
+        mt
     }
 
     /// Creates new merkle tree from an iterator over hashable objects.
-    pub fn from_iter<U: Hashable<A>, I: IntoIterator<Item=U>>(into: I, alg: A) -> MerkleTree<T, A> {
+    pub fn from_iter<I: IntoIterator<Item=T>>(into: I, alg: A) -> MerkleTree<T, A> {
         let iter = into.into_iter();
         let iter_count = match iter.size_hint().1 {
             Some(e) => {e},
@@ -107,11 +131,7 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher> M
 
         // compute leafs
         for item in iter {
-            mt.alg.reset();
-            item.hash(&mut mt.alg);
-
-            let h = mt.alg.hash();
-            mt.data.push(mt.alg.leaf(h))
+            mt.data.push(mt.alg.leaf(item))
         }
 
         mt.build();
