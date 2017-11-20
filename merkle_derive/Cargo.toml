@@ -5,10 +5,10 @@ authors = [
   "Ivan Prisyazhnyy <john.koepi@gmail.com>"
 ]
 
-description   = "#[derive(Hashable)] for simple merkle tree Hashable"
+description   = "#[derive(Hashable)] for light merkle tree Hashable"
 license       = "BSD-3-Clause"
-homepage      = "https://github.com/sitano/merkle_simple"
-repository    = "https://github.com/sitano/merkle_simple"
+homepage      = "https://github.com/sitano/merkle_light"
+repository    = "https://github.com/sitano/merkle_light"
 readme        = "README.md"
 keywords      = ["merkle", "merkle-tree"]
 categories    = ["data-structures", "cryptography"]

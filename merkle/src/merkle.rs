@@ -1,17 +1,14 @@
 use hash::{Hashable, Algorithm};
 use merkle_hash::MerkleHasher;
 use std::hash::Hasher;
+use proof::Proof;
 
 /// Merkle Tree.
 ///
-/// All leafs and nodes are stored as linear array (vec).
-/// A linear array was chosen as opposed to an actual tree structure since it uses
-/// about half as much memory.  The following describes a merkle tree and how it
-/// is stored in a linear array.
+/// All leafs and nodes are stored in a linear array (vec).
 ///
 /// A merkle tree is a tree in which every non-leaf node is the hash of its
-/// children nodes.  A diagram depicting how this works for bitcoin transactions
-/// where h(x) is a double sha256 follows:
+/// children nodes. A diagram depicting how it works:
 ///
 /// ```text
 ///         root = h1234 = h(h12 + h34)
@@ -21,13 +18,13 @@ use std::hash::Hasher;
 /// h1 = h(tx1)  h2 = h(tx2)    h3 = h(tx3)  h4 = h(tx4)
 /// ```
 ///
-/// The above stored as a linear array is as follows:
+/// In memory layout:
 ///
 /// ```text
 ///     [h1 h2 h3 h4 h12 h34 root]
 /// ```
 ///
-/// As the above shows, the merkle root is always the last element in the array.
+/// Merkle root is always the last element in the array.
 ///
 /// The number of inputs is not always a power of two which results in a
 /// balanced tree structure as above.  In that case, parent nodes with no
@@ -40,6 +37,7 @@ use std::hash::Hasher;
 /// TODO: Index<t>
 /// TODO: Ord, Eq
 /// TODO: Proof/ SPVЗ
+/// TODO: replace Vec with raw mem one day
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T>> {
     data: Vec<T>,
@@ -49,7 +47,8 @@ pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorit
     alg: A,
 }
 
-impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + Clone> MerkleTree<T, A> {
+impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + Clone>
+    MerkleTree<T, A> {
     /// Creates new merkle from a sequence of hashes.
     pub fn new(data: &[T], alg: A) -> MerkleTree<T, A> {
         Self::from_hash(data, alg)
@@ -63,18 +62,21 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
     /// Creates new merkle tree from a list of hashable objects.
     pub fn from_data<U: Hashable<A>>(data: &[U], a: A) -> MerkleTree<T, A> {
         let mut b = a.clone();
-        Self::from_iter(data.iter().map(|x| {
-            b.reset();
-            x.hash(&mut b);
-            b.hash()
-        }), a)
+        Self::from_iter(
+            data.iter().map(|x| {
+                b.reset();
+                x.hash(&mut b);
+                b.hash()
+            }),
+            a,
+        )
     }
 
     /// Creates new merkle tree from an iterator over hashable objects.
-    pub fn from_iter<I: IntoIterator<Item=T>>(into: I, alg: A) -> MerkleTree<T, A> {
+    pub fn from_iter<I: IntoIterator<Item = T>>(into: I, alg: A) -> MerkleTree<T, A> {
         let iter = into.into_iter();
         let iter_count = match iter.size_hint().1 {
-            Some(e) => {e},
+            Some(e) => e,
             None => panic!("not supported / not implemented"),
         };
         debug_assert_ne!(iter_count, 0);
@@ -86,7 +88,7 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
             data: Vec::with_capacity(size),
             olen: iter_count,
             leafs: pow,
-            height: 1+pow.trailing_zeros() as usize,
+            height: 1 + pow.trailing_zeros() as usize,
             alg,
         };
 
@@ -100,7 +102,7 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
     }
 
     fn build(&mut self) {
-        let size = 2*self.leafs-1;
+        let size = 2 * self.leafs - 1;
         let h0 = T::default();
 
         // not built yet
@@ -134,6 +136,43 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
             j += 1;
             i += 2;
         }
+    }
+
+    /// Generate merkle tree inclusion proof for leaf `i`
+    pub fn gen_proof(&self, i: usize) -> Proof<T> {
+        assert!(i < self.olen); // i in [0 .. self.valid_leafs)
+
+        let mut base = 0;
+        let mut step = self.leafs; // power of 2
+        let mut j = i;
+
+        let h0 = T::default();
+        let mut lemma: Vec<T> = Vec::with_capacity(self.height);
+        while step > 1 {
+            let pair = if j & 1 == 0 {
+                // j is left
+                let rh = base + j + 1;
+                if self.data[rh] == h0 {
+                    // right is empty
+                    base + j
+                } else {
+                    // right is good
+                    base + j + 1
+                }
+            } else {
+                // j is right
+                base + j - 1
+            };
+            lemma.push(self.data[pair].clone());
+            base += step;
+            step >>= 1;
+            j >>= 1;
+        }
+
+        // root is final
+        lemma.push(self.root());
+
+        Proof::new(lemma, self.data[i].clone(), i & 1 == 0)
     }
 
     /// Returns merkle root
