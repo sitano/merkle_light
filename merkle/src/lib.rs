@@ -63,9 +63,6 @@ pub mod hash;
 /// Common implementations for [`Hashable`].
 mod hash_impl;
 
-/// Merkle tree hash helpers for [`Algorithm`] trait.
-mod merkle_hash;
-
 /// Merkle tree inclusion proof
 pub mod proof;
 
@@ -79,3 +76,7 @@ mod test_xor128;
 /// Tests SIP.
 #[cfg(test)]
 mod test_sip;
+
+/// Tests for Merkle Hasher Customization
+#[cfg(test)]
+mod test_cmh;

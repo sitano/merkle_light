@@ -94,20 +94,11 @@ pub trait Hashable<H: Hasher> {
     }
 }
 
-/// MT hash helper
-pub trait MerkleHasher<T>
-where
-    T: Ord + Clone + Default + Debug,
-{
-    /// Returns digest of the empty thing.
-    fn empty(&mut self) -> T;
+/// MT leaf hash prefix
+const LEAF: u8 = 0x00;
 
-    /// Returns the hash value for MT leaf (prefix 0x00).
-    fn leaf(&mut self, leaf: T) -> T;
-
-    /// Returns the hash value for MT interior node (prefix 0x01).
-    fn node(&mut self, left: T, right: T) -> T;
-}
+/// MT interior node hash prefix
+const INTERIOR: u8 = 0x01;
 
 /// Hashing algorithm type.
 ///
@@ -117,7 +108,7 @@ where
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
-pub trait Algorithm<T>: Hasher + MerkleHasher<T>
+pub trait Algorithm<T>: Hasher
 where
     T: Ord + Clone + Default + Debug,
 {
@@ -129,4 +120,27 @@ where
 
     /// Reset Hasher state.
     fn reset(&mut self);
+
+    /// Returns digest of the empty thing.
+    fn empty(&mut self) -> T {
+        self.reset();
+        self.hash()
+    }
+
+    /// Returns the hash value for MT leaf (prefix 0x00).
+    fn leaf(&mut self, leaf: T) -> T {
+        self.reset();
+        self.write_u8(LEAF);
+        self.write_t(leaf);
+        self.hash()
+    }
+
+    /// Returns the hash value for MT interior node (prefix 0x01).
+    fn node(&mut self, left: T, right: T) -> T {
+        self.reset();
+        self.write_u8(INTERIOR);
+        self.write_t(left);
+        self.write_t(right);
+        self.hash()
+    }
 }
