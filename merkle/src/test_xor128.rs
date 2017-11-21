@@ -9,9 +9,11 @@ use std::hash::Hasher;
 
 const SIZE: usize = 0x10;
 
+type Item = [u8; SIZE];
+
 #[derive(Debug, Copy, Clone)]
 struct XOR128 {
-    data: [u8; SIZE],
+    data: Item,
     i: usize,
 }
 
@@ -43,13 +45,17 @@ impl Hasher for XOR128 {
     }
 }
 
-impl Algorithm<[u8; 16]> for XOR128 {
+impl Algorithm<Item> for XOR128 {
     fn hash(&self) -> [u8; 16] {
         self.data
     }
 
     fn reset(&mut self) {
         *self = XOR128::new();
+    }
+
+    fn write_t(&mut self, i: Item) {
+        self.write(i.as_ref());
     }
 }
 
@@ -219,7 +225,7 @@ fn test_simple_tree() {
         assert_eq!(mt.height(), log2_pow2(mt.len() + 1));
         assert_eq!(mt.as_slice(), answer[items - 2].as_slice());
 
-        for i in 0 .. mt.olen() {
+        for i in 0..mt.olen() {
             let p = mt.gen_proof(i);
             assert!(p.validate(XOR128::new()));
         }

@@ -1,6 +1,4 @@
 use hash::Algorithm;
-use merkle_hash::MerkleHasher;
-use std::marker::PhantomData;
 use std::fmt::Debug;
 
 /// Merkle tree inclusion proof for data element, for which item = Leaf(Hash(Data Item)).
@@ -12,54 +10,49 @@ use std::fmt::Debug;
 /// ```
 ///
 /// Proof validation is positioned hash against lemma path to match root hash.
+///
+/// TODO: replace Vec with raw mem one day
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Proof<U, T: AsRef<[U]> + Ord + Clone + Default + Debug> {
+pub struct Proof<T: Ord + Clone + Default + Debug> {
     lemma: Vec<T>,
-    left: bool,
-    _u: PhantomData<U>,
+    path: Vec<bool>,
 }
 
-impl<U, T: AsRef<[U]> + Sized + Ord + Clone + Default + Debug> Proof<U, T> {
+impl<T: Sized + Ord + Clone + Default + Debug> Proof<T> {
     /// Creates new MT inclusion proof
-    pub fn new(lemma: Vec<T>, left: bool) -> Proof<U, T> {
-        assert!(lemma.len() > 2);
-        Proof { lemma, left, _u: PhantomData }
+    pub fn new(hash: Vec<T>, path: Vec<bool>) -> Proof<T> {
+        assert!(hash.len() > 2);
+        assert_eq!(hash.len() - 2, path.len());
+        Proof { lemma: hash, path }
     }
 
     /// Return proof target leaf
     pub fn item(&self) -> T {
-        self.0.first().unwrap().clone()
+        self.lemma.first().unwrap().clone()
     }
 
     /// Return tree root
     pub fn root(&self) -> T {
-        self.0.last().unwrap().clone()
+        self.lemma.last().unwrap().clone()
     }
 
     /// Verifies MT inclusion proof
-    pub fn validate<A: Algorithm<U, T>>(&self, mut alg: A) -> bool {
-        let size = self.0.len();
+    pub fn validate<A: Algorithm<T>>(&self, mut alg: A) -> bool {
+        let size = self.lemma.len();
         if size < 2 {
-            return false
+            return false;
         }
 
         let mut h = self.item();
-        let mut side = self.1; // left == true
-        let root = self.root();
 
-        for i in 1 .. size-1 {
+        for i in 1..size - 1 {
             alg.reset();
-            match side {
-                true => {
-                    h = alg.node(h, self.0[i].clone());
-                }
-                false => {
-                    h = alg.node(self.0[i].clone(), h);
-                }
-            }
-            side = !side;
+            h = match self.path[i - 1] {
+                true => alg.node(h, self.lemma[i].clone()),
+                false => alg.node(self.lemma[i].clone(), h),
+            };
         }
 
-        h == root
+        h == self.root()
     }
 }

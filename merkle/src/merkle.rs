@@ -1,9 +1,7 @@
 use hash::{Hashable, Algorithm};
-use merkle_hash::MerkleHasher;
 use proof::Proof;
 use std::fmt::Debug;
 use std::hash::Hasher;
-use std::marker::PhantomData;
 
 /// Merkle Tree.
 ///
@@ -38,36 +36,32 @@ use std::marker::PhantomData;
 /// TODO: From<> trait impl?
 /// TODO: Index<t>
 /// TODO: Ord, Eq
-/// TODO: Proof/ SPVЗ
 /// TODO: Customizable merkle hash helper
 /// TODO: replace Vec with raw mem one day
 /// TODO: allow non u8 refs (u64)
 /// TODO: Deref<T> plz for as_slice and len
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct MerkleTree<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T>> {
+pub struct MerkleTree<T: Ord + Clone + Default + Debug, A: Algorithm<T>> {
     data: Vec<T>,
     olen: usize,
     leafs: usize,
     height: usize,
     alg: A,
-    _u: PhantomData<U>,
 }
 
-impl<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T> + Hasher + Clone>
-    MerkleTree<U, T, A> {
-    
+impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> MerkleTree<T, A> {
     /// Creates new merkle from a sequence of hashes.
-    pub fn new(data: &[T], alg: A) -> MerkleTree<U, T, A> {
+    pub fn new(data: &[T], alg: A) -> MerkleTree<T, A> {
         Self::from_hash(data, alg)
     }
 
     /// Creates new merkle from a sequence of hashes.
-    pub fn from_hash(data: &[T], alg: A) -> MerkleTree<U, T, A> {
+    pub fn from_hash(data: &[T], alg: A) -> MerkleTree<T, A> {
         Self::from_iter(data.iter().map(|x| x.clone()), alg)
     }
 
     /// Creates new merkle tree from a list of hashable objects.
-    pub fn from_data<O: Hashable<A>>(data: &[O], a: A) -> MerkleTree<U, T, A> {
+    pub fn from_data<O: Hashable<A>>(data: &[O], a: A) -> MerkleTree<T, A> {
         let mut b = a.clone();
         Self::from_iter(
             data.iter().map(|x| {
@@ -80,7 +74,7 @@ impl<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T> + Hash
     }
 
     /// Creates new merkle tree from an iterator over hashable objects.
-    pub fn from_iter<I: IntoIterator<Item = T>>(into: I, alg: A) -> MerkleTree<U, T, A> {
+    pub fn from_iter<I: IntoIterator<Item = T>>(into: I, alg: A) -> MerkleTree<T, A> {
         let iter = into.into_iter();
         let iter_count = match iter.size_hint().1 {
             Some(e) => e,
@@ -91,13 +85,12 @@ impl<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T> + Hash
         let pow = next_pow2(iter_count);
         let size = 2 * pow - 1;
 
-        let mut mt: MerkleTree<U, T, A> = MerkleTree {
+        let mut mt: MerkleTree<T, A> = MerkleTree {
             data: Vec::with_capacity(size),
             olen: iter_count,
             leafs: pow,
             height: log2_pow2(size + 1),
             alg,
-            _u: PhantomData,
         };
 
         // compute leafs
@@ -147,7 +140,7 @@ impl<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T> + Hash
     }
 
     /// Generate merkle tree inclusion proof for leaf `i`
-    pub fn gen_proof(&self, i: usize) -> Proof<U, T> {
+    pub fn gen_proof(&self, i: usize) -> Proof<T> {
         assert!(i < self.olen); // i in [0 .. self.valid_leafs)
 
         let mut base = 0;
@@ -155,7 +148,8 @@ impl<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T> + Hash
         let mut j = i;
 
         let h0 = T::default();
-        let mut lemma: Vec<T> = Vec::with_capacity(self.height + 1);
+        let mut lemma: Vec<T> = Vec::with_capacity(self.height + 1); // path + root
+        let mut path: Vec<bool> = Vec::with_capacity(self.height - 1); // path - 1
         lemma.push(self.data[i].clone());
 
         while step > 1 {
@@ -174,6 +168,7 @@ impl<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T> + Hash
                 base + j - 1
             };
             lemma.push(self.data[pair].clone());
+            path.push(j & 1 == 0);
             base += step;
             step >>= 1;
             j >>= 1;
@@ -181,8 +176,7 @@ impl<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T> + Hash
 
         // root is final
         lemma.push(self.root());
-
-        Proof::new(lemma, i & 1 == 0)
+        Proof::new(lemma, path)
     }
 
     /// Returns merkle root

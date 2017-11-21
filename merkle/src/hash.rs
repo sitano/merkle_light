@@ -94,6 +94,21 @@ pub trait Hashable<H: Hasher> {
     }
 }
 
+/// MT hash helper
+pub trait MerkleHasher<T>
+where
+    T: Ord + Clone + Default + Debug,
+{
+    /// Returns digest of the empty thing.
+    fn empty(&mut self) -> T;
+
+    /// Returns the hash value for MT leaf (prefix 0x00).
+    fn leaf(&mut self, leaf: T) -> T;
+
+    /// Returns the hash value for MT interior node (prefix 0x01).
+    fn node(&mut self, left: T, right: T) -> T;
+}
+
 /// Hashing algorithm type.
 ///
 /// Algorithm conforms standard [`Hasher`] trait and provides methods to return
@@ -102,9 +117,9 @@ pub trait Hashable<H: Hasher> {
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
-pub trait Algorithm<U, T>: Hasher
+pub trait Algorithm<T>: Hasher + MerkleHasher<T>
 where
-    T: AsRef<[U]> + Ord + Clone + Default + Debug,
+    T: Ord + Clone + Default + Debug,
 {
     /// Writes a single `T` into this hasher.
     fn write_t(&mut self, i: T);
