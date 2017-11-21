@@ -6,6 +6,19 @@
 
 *merkle* is a lightweight Rust implementation of a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree).
 
+## Features
+
+- external dependency agnostic
+- std::hash::Hasher compatibility
+- standard types hasher implementations
+- `#[derive(Hashable)]` support for simple struct
+- customizable merkle leaf/node hashing algorithm
+- support for custom hash types without `AsRef[u8]` (e.g. [u8; 16], [u64; 4])
+- customizable hashing algorithm
+- linear memory layout, no nodes on heap
+- buildable from iterator, objects or hashes
+- SPV included
+
 ## Documentation
 
 Documentation is [available](https://sitano.github.io/merkle_light/merkle_light/index.html).
