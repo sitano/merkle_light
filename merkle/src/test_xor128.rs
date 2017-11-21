@@ -98,7 +98,7 @@ fn test_from_slice() {
             [0, 122, 120, 99,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [1, 0,   27,  10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ],
-        mt.as_slice(),
+        mt.as_slice()
     );
     assert_eq!(mt.len(), 3);
     assert_eq!(mt.olen(), 2);
