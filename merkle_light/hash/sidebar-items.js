@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["Algorithm","Hashing algorithm type."],["Hashable","A hashable type."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["log2_pow2","find power of 2 of a number which is power of 2"],["next_pow2","next_pow2 returns next highest power of two from a given number if it is not already a power of two."]],"struct":[["MerkleTree","Merkle Tree."]]});
