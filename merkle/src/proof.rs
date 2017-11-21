@@ -10,8 +10,6 @@ use std::fmt::Debug;
 /// ```
 ///
 /// Proof validation is positioned hash against lemma path to match root hash.
-///
-/// TODO: replace Vec with raw mem one day
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Proof<T: Ord + Clone + Default + Debug> {
     lemma: Vec<T>,

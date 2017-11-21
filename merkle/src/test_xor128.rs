@@ -224,6 +224,7 @@ fn test_simple_tree() {
         assert_eq!(mt.olen(), items);
         assert_eq!(mt.height(), log2_pow2(mt.len() + 1));
         assert_eq!(mt.as_slice(), answer[items - 2].as_slice());
+        assert_eq!(mt[0], mt[0]);
 
         for i in 0..mt.olen() {
             let p = mt.gen_proof(i);

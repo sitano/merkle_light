@@ -2,6 +2,7 @@ use hash::{Hashable, Algorithm};
 use proof::Proof;
 use std::fmt::Debug;
 use std::hash::Hasher;
+use std::ops;
 
 /// Merkle Tree.
 ///
@@ -33,12 +34,7 @@ use std::hash::Hasher;
 /// Since this function uses nodes that are pointers to the hashes, empty nodes
 /// will be nil.
 ///
-/// TODO: From<> trait impl?
-/// TODO: Index<t>
-/// TODO: Ord, Eq
-/// TODO: Customizable merkle hash helper
-/// TODO: replace Vec with raw mem one day
-/// TODO: Deref<T> plz for as_slice and len
+/// TODO: Ord
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: Ord + Clone + Default + Debug, A: Algorithm<T>> {
     data: Vec<T>,
@@ -207,7 +203,15 @@ impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> MerkleT
     ///
     /// Equivalent to `&s[..]`.
     pub fn as_slice(&self) -> &[T] {
-        self.data.as_slice()
+        self
+    }
+}
+
+impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> ops::Deref for MerkleTree<T, A> {
+    type Target = [T];
+
+    fn deref(&self) -> &[T] {
+        self.data.deref()
     }
 }
 
