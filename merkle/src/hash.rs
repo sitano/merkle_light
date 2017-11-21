@@ -1,6 +1,7 @@
 //! Hash infrastructure for items in Merkle Tree.
 
 use std::hash::Hasher;
+use std::fmt::Debug;
 
 /// A hashable type.
 ///
@@ -101,10 +102,13 @@ pub trait Hashable<H: Hasher> {
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
-pub trait Algorithm<T>: Hasher
+pub trait Algorithm<U, T>: Hasher
 where
-    T: AsRef<[u8]> + Sized + Ord + Clone + Default,
+    T: AsRef<[U]> + Ord + Clone + Default + Debug,
 {
+    /// Writes a single `T` into this hasher.
+    fn write_t(&mut self, i: T);
+
     /// Returns the hash value for the data stream written so far.
     fn hash(&self) -> T;
 

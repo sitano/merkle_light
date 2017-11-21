@@ -1,4 +1,5 @@
 use hash::Algorithm;
+use std::fmt::Debug;
 
 /// MT leaf hash prefix
 const LEAF: u8 = 0x00;
@@ -7,9 +8,9 @@ const LEAF: u8 = 0x00;
 const INTERIOR: u8 = 0x01;
 
 /// MT hash helper
-pub trait MerkleHasher<T>
+pub trait MerkleHasher<U, T>
 where
-    T: AsRef<[u8]> + Sized + Ord + Clone,
+    T: AsRef<[U]> + Sized + Ord + Clone,
 {
     /// Returns digest of the empty thing.
     fn empty(&mut self) -> T;
@@ -21,10 +22,10 @@ where
     fn node(&mut self, left: T, right: T) -> T;
 }
 
-impl<T, A> MerkleHasher<T> for A
+impl<U, T, A> MerkleHasher<U, T> for A
 where
-    T: AsRef<[u8]> + Sized + Ord + Clone + Default,
-    A: Algorithm<T>,
+    T: AsRef<[U]> + Ord + Clone + Default + Debug,
+    A: Algorithm<U, T>,
 {
     fn empty(&mut self) -> T {
         self.reset();
@@ -34,15 +35,15 @@ where
     fn leaf(&mut self, leaf: T) -> T {
         self.reset();
         self.write_u8(LEAF);
-        self.write(leaf.as_ref());
+        self.write_u(leaf);
         self.hash()
     }
 
     fn node(&mut self, left: T, right: T) -> T {
         self.reset();
         self.write_u8(INTERIOR);
-        self.write(left.as_ref());
-        self.write(right.as_ref());
+        self.write_u(left);
+        self.write_u(right);
         self.hash()
     }
 }

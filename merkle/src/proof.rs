@@ -1,5 +1,7 @@
 use hash::Algorithm;
 use merkle_hash::MerkleHasher;
+use std::marker::PhantomData;
+use std::fmt::Debug;
 
 /// Merkle tree inclusion proof for data element, for which item = Leaf(Hash(Data Item)).
 ///
@@ -11,13 +13,17 @@ use merkle_hash::MerkleHasher;
 ///
 /// Proof validation is positioned hash against lemma path to match root hash.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Proof<T: AsRef<[u8]> + Sized + Ord + Clone + Default>(Vec<T>, bool);
+pub struct Proof<U, T: AsRef<[U]> + Ord + Clone + Default + Debug> {
+    lemma: Vec<T>,
+    left: bool,
+    _u: PhantomData<U>,
+}
 
-impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default> Proof<T> {
+impl<U, T: AsRef<[U]> + Sized + Ord + Clone + Default + Debug> Proof<U, T> {
     /// Creates new MT inclusion proof
-    pub fn new(lemma: Vec<T>, left: bool) -> Proof<T> {
+    pub fn new(lemma: Vec<T>, left: bool) -> Proof<U, T> {
         assert!(lemma.len() > 2);
-        Proof(lemma, left)
+        Proof { lemma, left, _u: PhantomData }
     }
 
     /// Return proof target leaf
@@ -31,7 +37,7 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default> Proof<T> {
     }
 
     /// Verifies MT inclusion proof
-    pub fn validate<A: Algorithm<T>>(&self, mut alg: A) -> bool {
+    pub fn validate<A: Algorithm<U, T>>(&self, mut alg: A) -> bool {
         let size = self.0.len();
         if size < 2 {
             return false

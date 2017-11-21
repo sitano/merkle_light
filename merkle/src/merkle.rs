@@ -1,7 +1,9 @@
 use hash::{Hashable, Algorithm};
 use merkle_hash::MerkleHasher;
-use std::hash::Hasher;
 use proof::Proof;
+use std::fmt::Debug;
+use std::hash::Hasher;
+use std::marker::PhantomData;
 
 /// Merkle Tree.
 ///
@@ -42,28 +44,30 @@ use proof::Proof;
 /// TODO: allow non u8 refs (u64)
 /// TODO: Deref<T> plz for as_slice and len
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T>> {
+pub struct MerkleTree<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T>> {
     data: Vec<T>,
     olen: usize,
     leafs: usize,
     height: usize,
     alg: A,
+    _u: PhantomData<U>,
 }
 
-impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + Clone>
-    MerkleTree<T, A> {
+impl<U, T: AsRef<[U]> + Ord + Clone + Default + Debug, A: Algorithm<U, T> + Hasher + Clone>
+    MerkleTree<U, T, A> {
+    
     /// Creates new merkle from a sequence of hashes.
-    pub fn new(data: &[T], alg: A) -> MerkleTree<T, A> {
+    pub fn new(data: &[T], alg: A) -> MerkleTree<U, T, A> {
         Self::from_hash(data, alg)
     }
 
     /// Creates new merkle from a sequence of hashes.
-    pub fn from_hash(data: &[T], alg: A) -> MerkleTree<T, A> {
+    pub fn from_hash(data: &[T], alg: A) -> MerkleTree<U, T, A> {
         Self::from_iter(data.iter().map(|x| x.clone()), alg)
     }
 
     /// Creates new merkle tree from a list of hashable objects.
-    pub fn from_data<U: Hashable<A>>(data: &[U], a: A) -> MerkleTree<T, A> {
+    pub fn from_data<O: Hashable<A>>(data: &[O], a: A) -> MerkleTree<U, T, A> {
         let mut b = a.clone();
         Self::from_iter(
             data.iter().map(|x| {
@@ -76,7 +80,7 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
     }
 
     /// Creates new merkle tree from an iterator over hashable objects.
-    pub fn from_iter<I: IntoIterator<Item = T>>(into: I, alg: A) -> MerkleTree<T, A> {
+    pub fn from_iter<I: IntoIterator<Item = T>>(into: I, alg: A) -> MerkleTree<U, T, A> {
         let iter = into.into_iter();
         let iter_count = match iter.size_hint().1 {
             Some(e) => e,
@@ -87,12 +91,13 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
         let pow = next_pow2(iter_count);
         let size = 2 * pow - 1;
 
-        let mut mt: MerkleTree<T, A> = MerkleTree {
+        let mut mt: MerkleTree<U, T, A> = MerkleTree {
             data: Vec::with_capacity(size),
             olen: iter_count,
             leafs: pow,
             height: log2_pow2(size + 1),
             alg,
+            _u: PhantomData,
         };
 
         // compute leafs
@@ -142,7 +147,7 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
     }
 
     /// Generate merkle tree inclusion proof for leaf `i`
-    pub fn gen_proof(&self, i: usize) -> Proof<T> {
+    pub fn gen_proof(&self, i: usize) -> Proof<U, T> {
         assert!(i < self.olen); // i in [0 .. self.valid_leafs)
 
         let mut base = 0;
