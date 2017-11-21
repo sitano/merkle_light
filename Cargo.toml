@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "merkle",
+    "merkle_derive"
+]

@@ -72,6 +72,10 @@ pub mod proof;
 /// Merkle tree abstractions, implementation and algorithms.
 pub mod merkle;
 
-/// Tests with XOR128 example.
+/// Tests XOR128.
 #[cfg(test)]
-mod tests;
+mod test_xor128;
+
+/// Tests SIP.
+#[cfg(test)]
+mod test_sip;

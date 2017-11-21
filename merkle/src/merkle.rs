@@ -37,7 +37,9 @@ use proof::Proof;
 /// TODO: Index<t>
 /// TODO: Ord, Eq
 /// TODO: Proof/ SPVЗ
+/// TODO: Customizable merkle hash helper
 /// TODO: replace Vec with raw mem one day
+/// TODO: allow non u8 refs (u64)
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T>> {
     data: Vec<T>,
@@ -79,16 +81,16 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
             Some(e) => e,
             None => panic!("not supported / not implemented"),
         };
-        debug_assert_ne!(iter_count, 0);
+        assert!(iter_count > 1);
 
-        let pow = Self::next_pow2(iter_count);
+        let pow = next_pow2(iter_count);
         let size = 2 * pow - 1;
 
         let mut mt: MerkleTree<T, A> = MerkleTree {
             data: Vec::with_capacity(size),
             olen: iter_count,
             leafs: pow,
-            height: 1 + pow.trailing_zeros() as usize,
+            height: log2_pow2(size + 1),
             alg,
         };
 
@@ -147,7 +149,9 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
         let mut j = i;
 
         let h0 = T::default();
-        let mut lemma: Vec<T> = Vec::with_capacity(self.height);
+        let mut lemma: Vec<T> = Vec::with_capacity(self.height + 1);
+        lemma.push(self.data[i].clone());
+
         while step > 1 {
             let pair = if j & 1 == 0 {
                 // j is left
@@ -172,7 +176,7 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
         // root is final
         lemma.push(self.root());
 
-        Proof::new(lemma, self.data[i].clone(), i & 1 == 0)
+        Proof::new(lemma, i & 1 == 0)
     }
 
     /// Returns merkle root
@@ -200,20 +204,31 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T> + Hasher + 
         self.leafs
     }
 
-    /// next_pow2 returns next highest power of two from a given number if
-    /// it is not already a power of two.
+    /// Extracts a slice containing the entire vector.
     ///
-    /// http://locklessinc.com/articles/next_pow2/
-    /// https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2/466242#466242
-    fn next_pow2(mut n: usize) -> usize {
-        debug_assert!(n > 1);
-        n -= 1;
-        n |= n >> 1;
-        n |= n >> 2;
-        n |= n >> 4;
-        n |= n >> 8;
-        n |= n >> 16;
-        n |= n >> 32;
-        return n + 1;
+    /// Equivalent to `&s[..]`.
+    pub fn as_slice(&self) -> &[T] {
+        self.data.as_slice()
     }
+}
+
+/// next_pow2 returns next highest power of two from a given number if
+/// it is not already a power of two.
+///
+/// http://locklessinc.com/articles/next_pow2/
+/// https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2/466242#466242
+pub fn next_pow2(mut n: usize) -> usize {
+    n -= 1;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n |= n >> 32;
+    return n + 1;
+}
+
+/// find power of 2 of a number which is power of 2
+pub fn log2_pow2(n: usize) -> usize {
+    n.trailing_zeros() as usize
 }

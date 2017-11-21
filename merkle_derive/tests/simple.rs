@@ -1,9 +1,9 @@
-extern crate merkle;
+extern crate merkle_light;
 
 #[macro_use]
-extern crate merkle_derive;
+extern crate merkle_light_derive;
 
-use merkle::hash::Hashable;
+use merkle_light::hash::Hashable;
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
