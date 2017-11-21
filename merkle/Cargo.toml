@@ -17,3 +17,13 @@ categories    = ["data-structures", "cryptography"]
 
 [dev-dependencies]
 merkle_light_derive = { path = "../merkle_derive" }
+
+[package.metadata.release]
+sign-commit = true
+upload-doc = true
+doc-branch = "gh-pages"
+pre-release-commit-message = "Release version {{version}}."
+pro-release-commit-message = "Start next development iteration {{version}}."
+tag-message = "Release version {{version}}."
+doc-commit-message = "Update documentation."
+dev-version-ext = "pre"
