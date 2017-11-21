@@ -1,4 +1,5 @@
 use hash::Algorithm;
+use merkle_hash::MerkleHasher;
 
 /// Merkle tree inclusion proof for data element, for which item = Leaf(Hash(Data Item)).
 ///
@@ -30,7 +31,29 @@ impl<T: AsRef<[u8]> + Sized + Ord + Clone + Default> Proof<T> {
     }
 
     /// Verifies MT inclusion proof
-    pub fn validate<A: Algorithm<T>>(&self, _: A) -> bool {
-        unimplemented!()
+    pub fn validate<A: Algorithm<T>>(&self, mut alg: A) -> bool {
+        let size = self.0.len();
+        if size < 2 {
+            return false
+        }
+
+        let mut h = self.item();
+        let mut side = self.1; // left == true
+        let root = self.root();
+
+        for i in 1 .. size-1 {
+            alg.reset();
+            match side {
+                true => {
+                    h = alg.node(h, self.0[i].clone());
+                }
+                false => {
+                    h = alg.node(self.0[i].clone(), h);
+                }
+            }
+            side = !side;
+        }
+
+        h == root
     }
 }

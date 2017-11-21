@@ -87,15 +87,12 @@ fn test_from_slice() {
     let x = [String::from("ars"), String::from("zxc")];
     let mt = MerkleTree::from_data(&x, XOR128::new());
     assert_eq!(
-        format!("{:?}", mt),
-        concat!(
-            "MerkleTree { data: [[0, 97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ",
-            "[0, 122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ",
-            "[1, 0, 27, 10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], olen: 2",
-            ", leafs: 2, height: 2, alg: ",
-            "XOR128 { data: [1, 0, 27, 10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], i: 33 } ",
-            "}"
-        )
+        vec![
+            [0, 97,  114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 122, 120, 99,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0,   27,  10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ],
+        mt.as_slice(),
     );
     assert_eq!(mt.len(), 3);
     assert_eq!(mt.olen(), 2);
@@ -224,8 +221,7 @@ fn test_simple_tree() {
 
         for i in 0 .. mt.olen() {
             let p = mt.gen_proof(i);
-            println!("{:?}", p);
-            // TODO assert!(p.validate(XOR128::new()));
+            assert!(p.validate(XOR128::new()));
         }
     }
 }

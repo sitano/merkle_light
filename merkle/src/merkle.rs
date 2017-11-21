@@ -40,6 +40,7 @@ use proof::Proof;
 /// TODO: Customizable merkle hash helper
 /// TODO: replace Vec with raw mem one day
 /// TODO: allow non u8 refs (u64)
+/// TODO: Deref<T> plz for as_slice and len
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: AsRef<[u8]> + Sized + Ord + Clone + Default, A: Algorithm<T>> {
     data: Vec<T>,
