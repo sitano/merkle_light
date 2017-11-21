@@ -8,12 +8,12 @@
 
 ## Documentation
 
-Documentation is [available](https://sitano.github.io/merkle/merkle/index.html).
+Documentation is [available](https://sitano.github.io/merkle-light/merkle/index.html).
 
 ## Bug Reporting
 
 Please report bugs either as pull requests or as issues in [the issue
-tracker](https://github.com/sitano/merkle). *merkle* has a
+tracker](https://github.com/sitano/merkle-light). *merkle* has a
 **full disclosure** vulnerability policy. **Please do NOT attempt to report
 any security vulnerability in this code privately to anybody.**
 

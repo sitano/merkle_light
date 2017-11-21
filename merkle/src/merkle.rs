@@ -38,7 +38,6 @@ use std::hash::Hasher;
 /// TODO: Ord, Eq
 /// TODO: Customizable merkle hash helper
 /// TODO: replace Vec with raw mem one day
-/// TODO: allow non u8 refs (u64)
 /// TODO: Deref<T> plz for as_slice and len
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: Ord + Clone + Default + Debug, A: Algorithm<T>> {
