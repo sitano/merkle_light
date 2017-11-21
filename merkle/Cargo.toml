@@ -17,7 +17,7 @@ categories    = ["data-structures", "cryptography"]
 [dependencies]
 
 [dev-dependencies]
-merkle_light_derive = { path = "../merkle_derive" }
+merkle_light_derive = { path = "../merkle_derive", version = "0.1.0" }
 
 [package.metadata.release]
 sign-commit = true
