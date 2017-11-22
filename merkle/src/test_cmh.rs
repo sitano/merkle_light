@@ -76,16 +76,21 @@ impl Algorithm<Item> for CMH {
 fn test_custom_merkle_hasher() {
     let mut a = CMH::new();
     let mt = MerkleTree::from_iter(
-        [1, 2, 3, 4, 5]
-            .iter()
-            .map(|x| {
-                a.reset();
-                x.hash(&mut a);
-                a.hash()
-            }),
+        [1, 2, 3, 4, 5].iter().map(|x| {
+            a.reset();
+            x.hash(&mut a);
+            a.hash()
+        }),
         CMH::new(),
     );
 
-    assert_eq!(mt.as_slice().iter().take(mt.leafs()).filter(|&&x| x > 255).count(), 0);
+    assert_eq!(
+        mt.as_slice()
+            .iter()
+            .take(mt.leafs())
+            .filter(|&&x| x > 255)
+            .count(),
+        0
+    );
     assert_eq!(mt.as_slice().iter().filter(|&&x| x > 65535).count(), 0);
 }

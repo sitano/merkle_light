@@ -191,7 +191,9 @@ impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> MerkleT
     }
 
     /// Returns `true` if the vector contains no elements.
-    pub fn is_empty(&self) -> bool { self.data.is_empty() }
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
 
     /// Returns height of the tree
     pub fn height(&self) -> usize {
@@ -211,7 +213,8 @@ impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> MerkleT
     }
 }
 
-impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> ops::Deref for MerkleTree<T, A> {
+impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> ops::Deref
+    for MerkleTree<T, A> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
