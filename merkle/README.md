@@ -18,6 +18,7 @@
 - customizable hashing algorithm
 - linear memory layout, no nodes on heap
 - buildable from iterator, objects or hashes
+- certificate transparency style merkle hashing support
 - SPV included
 
 ## Documentation
