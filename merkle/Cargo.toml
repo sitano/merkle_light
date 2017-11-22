@@ -15,10 +15,6 @@ keywords      = ["merkle", "merkle-tree"]
 categories    = ["data-structures", "cryptography"]
 
 [dependencies]
-clippy = { version = "0.0.172", optional = true }
-
-[features]
-default = []
 
 [package.metadata.release]
 sign-commit = true
