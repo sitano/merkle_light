@@ -21,4 +21,18 @@ proc-macro = true
 syn = "0.11.11"
 quote = "0.3.15"
 merkle_light = { path = "../merkle", version = "0.1.0" }
+clippy = { version = "0.0.172", optional = true }
+
+[features]
+default = []
+
+[package.metadata.release]
+sign-commit = true
+upload-doc = true
+doc-branch = "gh-pages"
+pre-release-commit-message = "Release version {{version}}."
+pro-release-commit-message = "Start next development iteration {{version}}."
+tag-message = "Release version {{version}}."
+doc-commit-message = "Update documentation."
+dev-version-ext = "pre"
 

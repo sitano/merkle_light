@@ -14,7 +14,7 @@ use std::fmt::Debug;
 /// The resulting hash will be the combination of the values from calling
 /// [`hash`] on each field.
 ///
-/// ```
+/// ```text
 /// #[macro_use]
 /// extern crate merkle_light_derive;
 /// extern crate merkle_light;
@@ -108,6 +108,8 @@ const INTERIOR: u8 = 0x01;
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
+///
+/// TODO: #[inline]
 pub trait Algorithm<T>: Hasher
 where
     T: Ord + Clone + Default + Debug,

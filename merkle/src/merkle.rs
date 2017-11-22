@@ -35,6 +35,7 @@ use std::ops;
 /// will be nil.
 ///
 /// TODO: Ord
+/// TODO: Explicit Iterator
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: Ord + Clone + Default + Debug, A: Algorithm<T>> {
     data: Vec<T>,
@@ -52,7 +53,7 @@ impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> MerkleT
 
     /// Creates new merkle from a sequence of hashes.
     pub fn from_hash(data: &[T], alg: A) -> MerkleTree<T, A> {
-        Self::from_iter(data.iter().map(|x| x.clone()), alg)
+        Self::from_iter(data.iter().cloned(), alg)
     }
 
     /// Creates new merkle tree from a list of hashable objects.
@@ -189,6 +190,9 @@ impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> MerkleT
         self.data.len()
     }
 
+    /// Returns `true` if the vector contains no elements.
+    pub fn is_empty(&self) -> bool { self.data.is_empty() }
+
     /// Returns height of the tree
     pub fn height(&self) -> usize {
         self.height
@@ -215,11 +219,11 @@ impl<T: Ord + Clone + Default + Debug, A: Algorithm<T> + Hasher + Clone> ops::De
     }
 }
 
-/// next_pow2 returns next highest power of two from a given number if
+/// `next_pow2` returns next highest power of two from a given number if
 /// it is not already a power of two.
 ///
-/// http://locklessinc.com/articles/next_pow2/
-/// https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2/466242#466242
+/// [](http://locklessinc.com/articles/next_pow2/)
+/// [](https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2/466242#466242)
 pub fn next_pow2(mut n: usize) -> usize {
     n -= 1;
     n |= n >> 1;
@@ -228,7 +232,7 @@ pub fn next_pow2(mut n: usize) -> usize {
     n |= n >> 8;
     n |= n >> 16;
     n |= n >> 32;
-    return n + 1;
+    n + 1
 }
 
 /// find power of 2 of a number which is power of 2

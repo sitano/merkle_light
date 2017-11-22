@@ -45,9 +45,10 @@ impl<T: Sized + Ord + Clone + Default + Debug> Proof<T> {
 
         for i in 1..size - 1 {
             alg.reset();
-            h = match self.path[i - 1] {
-                true => alg.node(h, self.lemma[i].clone()),
-                false => alg.node(self.lemma[i].clone(), h),
+            h = if self.path[i - 1] {
+                alg.node(h, self.lemma[i].clone())
+            } else {
+                alg.node(self.lemma[i].clone(), h)
             };
         }
 

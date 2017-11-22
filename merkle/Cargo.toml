@@ -15,9 +15,10 @@ keywords      = ["merkle", "merkle-tree"]
 categories    = ["data-structures", "cryptography"]
 
 [dependencies]
+clippy = { version = "0.0.172", optional = true }
 
-[dev-dependencies]
-merkle_light_derive = { path = "../merkle_derive", version = "0.1.0" }
+[features]
+default = []
 
 [package.metadata.release]
 sign-commit = true

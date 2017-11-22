@@ -3,12 +3,12 @@
 //! Merkle tree (MT) implemented as a full binary tree allocated as a vec
 //! of statically sized hashes to give hashes more locality. MT specialized
 //! to the extent of hashing algorithm and hash item, compatible to the
-//! std::hash::Hasher and supports custom hash algorithms.
+//! `std::hash::Hasher` and supports custom hash algorithms.
 //! Implementation does not depend on any external crypto libraries,
 //! and tries to be as performant, as possible.
 //!
 //! This tree implementation uses encoding scheme as in _Certificate Transparency_
-//! RFC 6962 (https://tools.ietf.org/html/rfc6962):
+//! [RFC 6962](https://tools.ietf.org/html/rfc6962):
 //!
 //! ```text
 //! MTH({d(0)}) = ALG(0x00 || d(0)).
@@ -18,7 +18,7 @@
 //! MTH(D[n]) = ALG(0x01 || MTH(D[0:k]) || MTH(D[k:n])),
 //! ```
 //!
-//! Link: https://en.wikipedia.org/wiki/Merkle_tree
+//! Link: [](https://en.wikipedia.org/wiki/Merkle_tree)
 //!
 //! # Implementation choices
 //!
@@ -27,7 +27,7 @@
 //! must be interface (lib should not dep on crypto libs) and lib must somehow
 //! mimic std Rust api.
 //!
-//! Standard way in Rust is to hash objects with a std::hash::Hasher, and mainly
+//! Standard way in Rust is to hash objects with a `std::hash::Hasher`, and mainly
 //! that is the reason behind the choice of the abstractions:
 //!
 //! `Object : Hashable<H> -> Hasher + Algorithm <- Merkle Tree`
@@ -40,14 +40,19 @@
 //! that the result hash is a mapping of the data stream.
 //!
 //! # Interface
+//!
+//! ```text
 //! - build_tree (items) -> tree
 //! - get_root -> hash
 //! - gen_proof -> proof
 //! - validate_proof (proof, leaf, root) -> bool
+//! ```
 //!
 //! # Examples
 //!
-//! TODO
+//! [`test_sip.rs`]: algorithm implementation example for std sip hasher, u64 hash items
+//! [`test_xor128.rs`]: custom hash example xor128
+//! [`test_cmh.rs`]: custom merkle hasher implementation example
 
 #![deny(
     missing_docs, unused_qualifications,
@@ -56,6 +61,10 @@
     unsafe_code, unstable_features,
     unused_import_braces
 )]
+
+#![cfg_attr(feature="clippy", allow(unstable_features))]
+#![cfg_attr(feature="clippy", feature(plugin))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
 
 /// Hash infrastructure for items in Merkle tree.
 pub mod hash;
