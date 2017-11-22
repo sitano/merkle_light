@@ -16,6 +16,14 @@ categories    = ["data-structures", "cryptography"]
 
 [dependencies]
 
+ring = { version = "^0.12.1", optional = true }
+
+[dev-dependencies]
+
+[features]
+default = []
+bitcoin = ["ring"]
+
 [package.metadata.release]
 sign-commit = true
 upload-doc = true
