@@ -29,6 +29,4 @@ script:
   - cargo build --all-features
   - cargo test --all-features
   - cargo doc --all-features --no-deps
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-10-08" ]]; then
-      cargo clippy -- -A blacklisted-name -A unreadable-literal -D warnings --all
-    fi'
+  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly-2017-10-08" ]]; then cargo clippy -- -A blacklisted-name -A unreadable-literal -D warnings --all; fi'
