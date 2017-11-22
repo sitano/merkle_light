@@ -38,7 +38,7 @@ impl Hasher for XOR128 {
         let mut h: u64 = 0;
         let mut off: u64 = 0;
         for i in 0..8 {
-            h |= (self.data[i] as u64) << off;
+            h |= (u64::from(self.data[i])) << off;
             off += 8;
         }
         h
