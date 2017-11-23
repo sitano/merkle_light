@@ -43,100 +43,193 @@
         </form>
     </nav>
 
-    <section id='main' class="content"><pre class="line-numbers"><span id="1"> 1</span>
-<span id="2"> 2</span>
-<span id="3"> 3</span>
-<span id="4"> 4</span>
-<span id="5"> 5</span>
-<span id="6"> 6</span>
-<span id="7"> 7</span>
-<span id="8"> 8</span>
-<span id="9"> 9</span>
-<span id="10">10</span>
-<span id="11">11</span>
-<span id="12">12</span>
-<span id="13">13</span>
-<span id="14">14</span>
-<span id="15">15</span>
-<span id="16">16</span>
-<span id="17">17</span>
-<span id="18">18</span>
-<span id="19">19</span>
-<span id="20">20</span>
-<span id="21">21</span>
-<span id="22">22</span>
-<span id="23">23</span>
-<span id="24">24</span>
-<span id="25">25</span>
-<span id="26">26</span>
-<span id="27">27</span>
-<span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
+    <section id='main' class="content"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
 </pre><pre class="rust ">
 <span class="doccomment">//! light _Merkle Tree_ implementation.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Merkle tree (MT) implemented as a full binary tree allocated as a vec</span>
 <span class="doccomment">//! of statically sized hashes to give hashes more locality. MT specialized</span>
 <span class="doccomment">//! to the extent of hashing algorithm and hash item, compatible to the</span>
-<span class="doccomment">//! std::hash::Hasher and supports custom hash algorithms.</span>
+<span class="doccomment">//! `std::hash::Hasher` and supports custom hash algorithms.</span>
 <span class="doccomment">//! Implementation does not depend on any external crypto libraries,</span>
 <span class="doccomment">//! and tries to be as performant, as possible.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This tree implementation uses encoding scheme as in _Certificate Transparency_</span>
-<span class="doccomment">//! RFC 6962 (https://tools.ietf.org/html/rfc6962):</span>
+<span class="doccomment">//! [RFC 6962](https://tools.ietf.org/html/rfc6962):</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```text</span>
 <span class="doccomment">//! MTH({d(0)}) = ALG(0x00 || d(0)).</span>
@@ -146,7 +239,7 @@
 <span class="doccomment">//! MTH(D[n]) = ALG(0x01 || MTH(D[0:k]) || MTH(D[k:n])),</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Link: https://en.wikipedia.org/wiki/Merkle_tree</span>
+<span class="doccomment">//! Link: [](https://en.wikipedia.org/wiki/Merkle_tree)</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Implementation choices</span>
 <span class="doccomment">//!</span>
@@ -155,7 +248,7 @@
 <span class="doccomment">//! must be interface (lib should not dep on crypto libs) and lib must somehow</span>
 <span class="doccomment">//! mimic std Rust api.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Standard way in Rust is to hash objects with a std::hash::Hasher, and mainly</span>
+<span class="doccomment">//! Standard way in Rust is to hash objects with a `std::hash::Hasher`, and mainly</span>
 <span class="doccomment">//! that is the reason behind the choice of the abstractions:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! `Object : Hashable&lt;H&gt; -&gt; Hasher + Algorithm &lt;- Merkle Tree`</span>
@@ -167,15 +260,106 @@
 <span class="doccomment">//! [`Algorithm`] complements [`Hasher`] to be reusable and follows the idea</span>
 <span class="doccomment">//! that the result hash is a mapping of the data stream.</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! [`Algorithm.hash`] had to change its signature to be `&amp;mut self` (`&amp;self`) because</span>
+<span class="doccomment">//! most of the cryptographic digest algorithms breaks current state on finalization</span>
+<span class="doccomment">//! into unusable. `ring` libra tho contains interfaces incompatible to</span>
+<span class="doccomment">//! `start-update-finish-reset` lifecycle. It requires either `cloning()` its state</span>
+<span class="doccomment">//! on finalization, or `Cell`-ing via unsafe.</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! # Interface</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```text</span>
 <span class="doccomment">//! - build_tree (items) -&gt; tree</span>
 <span class="doccomment">//! - get_root -&gt; hash</span>
 <span class="doccomment">//! - gen_proof -&gt; proof</span>
 <span class="doccomment">//! - validate_proof (proof, leaf, root) -&gt; bool</span>
+<span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Examples</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! TODO</span>
+<span class="doccomment">//! [`test_sip.rs`]: algorithm implementation example for std sip hasher, u64 hash items</span>
+<span class="doccomment">//! [`test_xor128.rs`]: custom hash example xor128</span>
+<span class="doccomment">//! [`test_cmh.rs`]: custom merkle hasher implementation example</span>
+<span class="doccomment">//! [`crypto_bitcoin_mt.rs`]: bitcoin merkle tree using crypto lib</span>
+<span class="doccomment">//! [`crypto_chaincore_mt.rs`]: chain core merkle tree using crypto lib</span>
+<span class="doccomment">//! [`ring_bitcoin_mt.rs`]: bitcoin merkle tree using ring lib</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Quick start</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//! #![cfg(feature = &quot;chaincore&quot;)]</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! extern crate crypto;</span>
+<span class="doccomment">//! extern crate merkle_light;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! fn main() {</span>
+<span class="doccomment">//!     use std::fmt;</span>
+<span class="doccomment">//!     use std::hash::Hasher;</span>
+<span class="doccomment">//!     use merkle_light::hash::{Algorithm, Hashable};</span>
+<span class="doccomment">//!     use merkle_light::merkle::MerkleTree;</span>
+<span class="doccomment">//!     use crypto::sha3::{Sha3, Sha3Mode};</span>
+<span class="doccomment">//!     use crypto::digest::Digest;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     #[derive(Clone)]</span>
+<span class="doccomment">//!     struct ExampleAlgorithm(Sha3);</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     impl ExampleAlgorithm {</span>
+<span class="doccomment">//!         fn new() -&gt; ExampleAlgorithm {</span>
+<span class="doccomment">//!             ExampleAlgorithm(Sha3::new(Sha3Mode::Sha3_256))</span>
+<span class="doccomment">//!         }</span>
+<span class="doccomment">//!     }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     impl Default for ExampleAlgorithm {</span>
+<span class="doccomment">//!         fn default() -&gt; ExampleAlgorithm {</span>
+<span class="doccomment">//!             ExampleAlgorithm::new()</span>
+<span class="doccomment">//!         }</span>
+<span class="doccomment">//!     }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     impl Hasher for ExampleAlgorithm {</span>
+<span class="doccomment">//!         #[inline]</span>
+<span class="doccomment">//!         fn write(&amp;mut self, msg: &amp;[u8]) {</span>
+<span class="doccomment">//!             self.0.input(msg)</span>
+<span class="doccomment">//!         }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!         #[inline]</span>
+<span class="doccomment">//!         fn finish(&amp;self) -&gt; u64 {</span>
+<span class="doccomment">//!             0</span>
+<span class="doccomment">//!         }</span>
+<span class="doccomment">//!     }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     impl Hashable&lt;ExampleAlgorithm&gt; for [u8; 32] {</span>
+<span class="doccomment">//!         fn hash(&amp;self, state: &amp;mut ExampleAlgorithm) {</span>
+<span class="doccomment">//!             state.write(self.as_ref())</span>
+<span class="doccomment">//!         }</span>
+<span class="doccomment">//!     }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     impl Algorithm&lt;[u8; 32]&gt; for ExampleAlgorithm {</span>
+<span class="doccomment">//!         fn hash(&amp;mut self) -&gt; [u8; 32] {</span>
+<span class="doccomment">//!             let mut h = [0u8; 32];</span>
+<span class="doccomment">//!             self.0.result(&amp;mut h);</span>
+<span class="doccomment">//!             h</span>
+<span class="doccomment">//!         }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!         fn reset(&amp;mut self) {</span>
+<span class="doccomment">//!             self.0.reset();</span>
+<span class="doccomment">//!         }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!         fn write_t(&amp;mut self, i: [u8; 32]) {</span>
+<span class="doccomment">//!             self.0.input(i.as_ref());</span>
+<span class="doccomment">//!         }</span>
+<span class="doccomment">//!     }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     let mut h1 = [0u8; 32];</span>
+<span class="doccomment">//!     let mut h2 = [0u8; 32];</span>
+<span class="doccomment">//!     let mut h3 = [0u8; 32];</span>
+<span class="doccomment">//!     h1[0] = 0x11;</span>
+<span class="doccomment">//!     h2[0] = 0x22;</span>
+<span class="doccomment">//!     h3[0] = 0x33;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     let t = MerkleTree::from_iter(vec![h1, h2, h3], ExampleAlgorithm::new());</span>
+<span class="doccomment">//!     println!(&quot;{:?}&quot;, t.root());</span>
+<span class="doccomment">//! }</span>
+<span class="doccomment">//! ```</span>
 
 <span class="attribute">#![<span class="ident">deny</span>(
     <span class="ident">missing_docs</span>, <span class="ident">unused_qualifications</span>,
@@ -184,6 +368,8 @@
     <span class="ident">unsafe_code</span>, <span class="ident">unstable_features</span>,
     <span class="ident">unused_import_braces</span>
 )]</span>
+
+<span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">feature</span><span class="op">=</span><span class="string">&quot;nightly&quot;</span>, <span class="ident">allow</span>(<span class="ident">unstable_features</span>))]</span>
 
 <span class="doccomment">/// Hash infrastructure for items in Merkle tree.</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">hash</span>;
@@ -226,13 +412,15 @@
                     <dd>Show this help dialog</dd>
                     <dt>S</dt>
                     <dd>Focus the search field</dd>
-                    <dt>&larrb;</dt>
+                    <dt>↑</dt>
                     <dd>Move up in search results</dd>
-                    <dt>&rarrb;</dt>
+                    <dt>↓</dt>
                     <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
                     <dt>&#9166;</dt>
                     <dd>Go to active search result</dd>
-                    <dt>+</dt>
+                    <dt style="width:31px;">+ / -</dt>
                     <dd>Collapse/expand all sections</dd>
                 </dl>
             </div>
