@@ -1,34 +1,35 @@
 #![cfg(test)]
 #![cfg(feature = "bitcoin")]
 
-extern crate ring;
+extern crate crypto;
 extern crate merkle_light;
 
+use std::fmt;
+use std::hash::Hasher;
 use merkle_light::hash::{Algorithm, Hashable};
 use merkle_light::merkle::MerkleTree;
-use std::hash::Hasher;
-use ring::digest::{Context, SHA256};
-use std::fmt;
+use crypto::sha2::Sha256;
+use crypto::digest::Digest;
 
 #[derive(Clone)]
-struct RingBitcoinAlgorithm(Context);
+struct CryptoBitcoinAlgorithm(Sha256);
 
-impl RingBitcoinAlgorithm {
-    fn new() -> RingBitcoinAlgorithm {
-        RingBitcoinAlgorithm(Context::new(&SHA256))
+impl CryptoBitcoinAlgorithm {
+    fn new() -> CryptoBitcoinAlgorithm {
+        CryptoBitcoinAlgorithm(Sha256::new())
     }
 }
 
-impl Default for RingBitcoinAlgorithm {
-    fn default() -> RingBitcoinAlgorithm {
-        RingBitcoinAlgorithm::new()
+impl Default for CryptoBitcoinAlgorithm {
+    fn default() -> CryptoBitcoinAlgorithm {
+        CryptoBitcoinAlgorithm::new()
     }
 }
 
-impl Hasher for RingBitcoinAlgorithm {
+impl Hasher for CryptoBitcoinAlgorithm {
     #[inline]
     fn write(&mut self, msg: &[u8]) {
-        self.0.update(msg)
+        self.0.input(msg)
     }
 
     #[inline]
@@ -37,63 +38,46 @@ impl Hasher for RingBitcoinAlgorithm {
     }
 }
 
-type RingSHA256Hash = [u8; 32];
+type CryptoSHA256Hash = [u8; 32];
 
-impl Hashable<RingBitcoinAlgorithm> for RingSHA256Hash {
-    fn hash(&self, state: &mut RingBitcoinAlgorithm) {
+impl Hashable<CryptoBitcoinAlgorithm> for CryptoSHA256Hash {
+    fn hash(&self, state: &mut CryptoBitcoinAlgorithm) {
         state.write(self.as_ref())
     }
 }
 
-impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
-    /// ring.Context is not reusable after finalization (finish(self)),
-    /// and having hash(&self) requires first to clone() the context.
-    /// The context can't be moved away out of the struct field to
-    /// be created at site due to the semantics of Hasher trait:
-    /// Hasher trait has to have a context to write states updates.
-    ///
-    /// someone should hack it somehow.
+impl Algorithm<CryptoSHA256Hash> for CryptoBitcoinAlgorithm {
     #[inline]
-    fn hash(&self) -> RingSHA256Hash {
-        let h1 = self.0.clone().finish();
+    fn hash(&self) -> CryptoSHA256Hash {
+        let mut h = [0u8; 32];
+        self.0.result(&mut h);
 
         // double sha256
-        let mut c = Context::new(&SHA256);
-        c.update(h1.as_ref());
-
-        let mut h = [0u8; 32];
-        h.copy_from_slice(c.finish().as_ref());
+        let mut c = Sha256::new();
+        c.input(h.as_ref());
+        c.result(&mut h);
         h
     }
 
     #[inline]
     fn reset(&mut self) {
-        self.0 = Context::new(&SHA256);
+        self.0.reset();
     }
 
     #[inline]
-    fn write_t(&mut self, i: RingSHA256Hash) {
-        self.0.update(i.as_ref());
+    fn write_t(&mut self, i: CryptoSHA256Hash) {
+        self.0.input(i.as_ref());
     }
 
-    fn leaf(&mut self, leaf: RingSHA256Hash) -> RingSHA256Hash {
+    fn leaf(&mut self, leaf: CryptoSHA256Hash) -> CryptoSHA256Hash {
         leaf
     }
 
-    fn node(&mut self, left: RingSHA256Hash, right: RingSHA256Hash) -> RingSHA256Hash {
-        // concat
-        let mut c = Context::new(&SHA256);
-        c.update(left.as_ref());
-        c.update(right.as_ref());
-        let h1 = c.finish();
-
-        // double sha256
-        c = Context::new(&SHA256);
-        c.update(h1.as_ref());
-
-        let mut h = [0u8; 32];
-        h.copy_from_slice(c.finish().as_ref());
-        h
+    fn node(&mut self, left: CryptoSHA256Hash, right: CryptoSHA256Hash) -> CryptoSHA256Hash {
+        self.reset();
+        self.write(left.as_ref());
+        self.write(right.as_ref());
+        self.hash()
     }
 }
 
@@ -122,8 +106,8 @@ impl<'a> fmt::Display for HexSlice<'a> {
 
 /// [](https://bitcoin.stackexchange.com/questions/5671/how-do-you-perform-double-sha-256-encoding)
 #[test]
-fn test_ring_bitcoin_leaf_hash() {
-    let mut a = RingBitcoinAlgorithm::new();
+fn test_crypto_bitcoin_leaf_hash() {
+    let mut a = CryptoBitcoinAlgorithm::new();
     "hello".hash(&mut a);
     let h1 = a.hash();
     assert_eq!(
@@ -134,7 +118,7 @@ fn test_ring_bitcoin_leaf_hash() {
 
 /// [](http://chimera.labs.oreilly.com/books/1234000001802/ch07.html#merkle_trees)
 #[test]
-fn test_ring_bitcoin_node() {
+fn test_crypto_bitcoin_node() {
     let mut h1 = [0u8; 32];
     let mut h2 = [0u8; 32];
     let mut h3 = [0u8; 32];
@@ -143,7 +127,7 @@ fn test_ring_bitcoin_node() {
     h2[0] = 0x22;
     h3[0] = 0x33;
 
-    let mut a = RingBitcoinAlgorithm::new();
+    let mut a = CryptoBitcoinAlgorithm::new();
     let h11 = h1;
     let h12 = h2;
     let h13 = h3;
