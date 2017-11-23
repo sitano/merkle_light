@@ -37,7 +37,7 @@ impl Hasher for CMH {
 
 impl Algorithm<Item> for CMH {
     #[inline]
-    fn hash(&self) -> Item {
+    fn hash(&mut self) -> Item {
         self.finish()
     }
 

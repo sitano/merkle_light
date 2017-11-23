@@ -39,6 +39,12 @@
 //! [`Algorithm`] complements [`Hasher`] to be reusable and follows the idea
 //! that the result hash is a mapping of the data stream.
 //!
+//! [`Algorithm.hash`] had to change its signature to be `&mut self` (`&self`) because
+//! most of the cryptographic digest algorithms breaks current state on finalization
+//! into unusable. `ring` libra tho contains interfaces incompatible to
+//! `start-update-finish-reset` lifecycle. It requires either `cloning()` its state
+//! on finalization, or `Cell`-ing via unsafe.
+//!
 //! # Interface
 //!
 //! ```text
