@@ -10,7 +10,7 @@ use std::hash::Hasher;
 type Item = u64;
 
 impl Algorithm<Item> for DefaultHasher {
-    fn hash(&self) -> Item {
+    fn hash(&mut self) -> Item {
         self.finish()
     }
 

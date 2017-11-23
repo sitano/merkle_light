@@ -48,7 +48,7 @@ impl Hashable<CryptoBitcoinAlgorithm> for CryptoSHA256Hash {
 
 impl Algorithm<CryptoSHA256Hash> for CryptoBitcoinAlgorithm {
     #[inline]
-    fn hash(&self) -> CryptoSHA256Hash {
+    fn hash(&mut self) -> CryptoSHA256Hash {
         let mut h = [0u8; 32];
         self.0.result(&mut h);
 

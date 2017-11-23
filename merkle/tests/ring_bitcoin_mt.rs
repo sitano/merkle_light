@@ -54,7 +54,7 @@ impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
     ///
     /// someone should hack it somehow.
     #[inline]
-    fn hash(&self) -> RingSHA256Hash {
+    fn hash(&mut self) -> RingSHA256Hash {
         let h1 = self.0.clone().finish();
 
         // double sha256

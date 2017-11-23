@@ -46,7 +46,7 @@ impl Hasher for XOR128 {
 }
 
 impl Algorithm<Item> for XOR128 {
-    fn hash(&self) -> [u8; 16] {
+    fn hash(&mut self) -> [u8; 16] {
         self.data
     }
 

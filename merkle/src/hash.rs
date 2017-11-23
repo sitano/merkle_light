@@ -118,7 +118,7 @@ where
     fn write_t(&mut self, i: T);
 
     /// Returns the hash value for the data stream written so far.
-    fn hash(&self) -> T;
+    fn hash(&mut self) -> T;
 
     /// Reset Hasher state.
     fn reset(&mut self);
