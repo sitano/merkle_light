@@ -66,24 +66,23 @@
 //! # Quick start
 //!
 //! ```
-//! #![cfg(feature = "chaincore")]
-//!
+//! #[cfg(feature = "chaincore")]
 //! extern crate crypto;
 //! extern crate merkle_light;
 //!
-//! fn main() {
+//! #[cfg(feature = "chaincore")]
+//! mod example {
 //!     use std::fmt;
 //!     use std::hash::Hasher;
-//!     use merkle_light::hash::{Algorithm, Hashable};
-//!     use merkle_light::merkle::MerkleTree;
 //!     use crypto::sha3::{Sha3, Sha3Mode};
 //!     use crypto::digest::Digest;
+//!     use merkle_light::hash::{Algorithm, Hashable};
 //!
 //!     #[derive(Clone)]
-//!     struct ExampleAlgorithm(Sha3);
+//!     pub struct ExampleAlgorithm(Sha3);
 //!
 //!     impl ExampleAlgorithm {
-//!         fn new() -> ExampleAlgorithm {
+//!         pub fn new() -> ExampleAlgorithm {
 //!             ExampleAlgorithm(Sha3::new(Sha3Mode::Sha3_256))
 //!         }
 //!     }
@@ -127,6 +126,13 @@
 //!             self.0.input(i.as_ref());
 //!         }
 //!     }
+//! }
+//!
+//! fn main() {
+//! #[cfg(feature = "chaincore")]
+//! {
+//!     use merkle_light::merkle::MerkleTree;
+//!     use example::ExampleAlgorithm;
 //!
 //!     let mut h1 = [0u8; 32];
 //!     let mut h2 = [0u8; 32];
@@ -137,6 +143,7 @@
 //!
 //!     let t = MerkleTree::from_iter(vec![h1, h2, h3], ExampleAlgorithm::new());
 //!     println!("{:?}", t.root());
+//! }
 //! }
 //! ```
 
