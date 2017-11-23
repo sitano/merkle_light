@@ -52,11 +52,6 @@ impl Algorithm<Item> for CMH {
     }
 
     #[inline]
-    fn empty(&mut self) -> Item {
-        0
-    }
-
-    #[inline]
     fn leaf(&mut self, leaf: Item) -> Item {
         leaf & 0xff
     }

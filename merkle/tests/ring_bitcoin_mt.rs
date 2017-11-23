@@ -74,11 +74,6 @@ impl Algorithm<Hash32> for BitcoinAlgorithm {
         self.0.update(i.as_ref());
     }
 
-    #[inline]
-    fn empty(&mut self) -> Hash32 {
-        [0u8; 32]
-    }
-
     fn leaf(&mut self, leaf: Hash32) -> Hash32 {
         leaf
     }

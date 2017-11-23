@@ -123,12 +123,6 @@ where
     /// Reset Hasher state.
     fn reset(&mut self);
 
-    /// Returns digest of the empty thing.
-    fn empty(&mut self) -> T {
-        self.reset();
-        self.hash()
-    }
-
     /// Returns the hash value for MT leaf (prefix 0x00).
     fn leaf(&mut self, leaf: T) -> T {
         self.reset();
