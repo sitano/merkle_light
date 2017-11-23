@@ -59,6 +59,86 @@
 //! [`test_sip.rs`]: algorithm implementation example for std sip hasher, u64 hash items
 //! [`test_xor128.rs`]: custom hash example xor128
 //! [`test_cmh.rs`]: custom merkle hasher implementation example
+//! [`crypto_bitcoin_mt.rs`]: bitcoin merkle tree using crypto lib
+//! [`crypto_chaincore_mt.rs`]: chain core merkle tree using crypto lib
+//! [`ring_bitcoin_mt.rs`]: bitcoin merkle tree using ring lib
+//!
+//! # Quick start
+//!
+//! ```
+//! #![cfg(feature = "chaincore")]
+//!
+//! extern crate crypto;
+//! extern crate merkle_light;
+//!
+//! fn main() {
+//!     use std::fmt;
+//!     use std::hash::Hasher;
+//!     use merkle_light::hash::{Algorithm, Hashable};
+//!     use merkle_light::merkle::MerkleTree;
+//!     use crypto::sha3::{Sha3, Sha3Mode};
+//!     use crypto::digest::Digest;
+//!
+//!     #[derive(Clone)]
+//!     struct ExampleAlgorithm(Sha3);
+//!
+//!     impl ExampleAlgorithm {
+//!         fn new() -> ExampleAlgorithm {
+//!             ExampleAlgorithm(Sha3::new(Sha3Mode::Sha3_256))
+//!         }
+//!     }
+//!
+//!     impl Default for ExampleAlgorithm {
+//!         fn default() -> ExampleAlgorithm {
+//!             ExampleAlgorithm::new()
+//!         }
+//!     }
+//!
+//!     impl Hasher for ExampleAlgorithm {
+//!         #[inline]
+//!         fn write(&mut self, msg: &[u8]) {
+//!             self.0.input(msg)
+//!         }
+//!
+//!         #[inline]
+//!         fn finish(&self) -> u64 {
+//!             0
+//!         }
+//!     }
+//!
+//!     impl Hashable<ExampleAlgorithm> for [u8; 32] {
+//!         fn hash(&self, state: &mut ExampleAlgorithm) {
+//!             state.write(self.as_ref())
+//!         }
+//!     }
+//!
+//!     impl Algorithm<[u8; 32]> for ExampleAlgorithm {
+//!         fn hash(&mut self) -> [u8; 32] {
+//!             let mut h = [0u8; 32];
+//!             self.0.result(&mut h);
+//!             h
+//!         }
+//!
+//!         fn reset(&mut self) {
+//!             self.0.reset();
+//!         }
+//!
+//!         fn write_t(&mut self, i: [u8; 32]) {
+//!             self.0.input(i.as_ref());
+//!         }
+//!     }
+//!
+//!     let mut h1 = [0u8; 32];
+//!     let mut h2 = [0u8; 32];
+//!     let mut h3 = [0u8; 32];
+//!     h1[0] = 0x11;
+//!     h2[0] = 0x22;
+//!     h3[0] = 0x33;
+//!
+//!     let t = MerkleTree::from_iter(vec![h1, h2, h3], ExampleAlgorithm::new());
+//!     println!("{:?}", t.root());
+//! }
+//! ```
 
 #![deny(
     missing_docs, unused_qualifications,
