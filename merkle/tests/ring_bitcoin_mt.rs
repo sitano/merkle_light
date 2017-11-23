@@ -53,6 +53,9 @@ impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
     /// Hasher trait has to have a context to write states updates.
     ///
     /// someone should hack it somehow.
+    ///
+    /// or better change signature in `ring` library of `finish()` to
+    /// be `finish(&mut self)` to mark state as finalized or reset it.
     #[inline]
     fn hash(&mut self) -> RingSHA256Hash {
         let h1 = self.0.clone().finish();

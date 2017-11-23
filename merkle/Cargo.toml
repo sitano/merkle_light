@@ -24,6 +24,7 @@ rust-crypto = { version = "^0.2.36", optional = true }
 [features]
 default = []
 bitcoin = ["ring", "rust-crypto"]
+chaincore = ["rust-crypto"]
 
 [package.metadata.release]
 sign-commit = true
