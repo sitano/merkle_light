@@ -18,6 +18,7 @@ use std::fmt::Debug;
 /// #[macro_use]
 /// extern crate merkle_light_derive;
 /// extern crate merkle_light;
+///
 /// use merkle_light::hash::Hashable;
 ///
 /// fn main() {
@@ -34,6 +35,7 @@ use std::fmt::Debug;
 ///
 /// ```
 /// extern crate merkle_light;
+///
 /// use merkle_light::hash::Hashable;
 /// use std::hash::Hasher;
 /// use std::collections::hash_map::DefaultHasher;
