@@ -122,10 +122,9 @@ fn test_crypto_bitcoin_node() {
     let mut h1 = [0u8; 32];
     let mut h2 = [0u8; 32];
     let mut h3 = [0u8; 32];
-    // can't hash 0 as h0 is 0 (neutral element)
-    h1[0] = 0x11;
-    h2[0] = 0x22;
-    h3[0] = 0x33;
+    h1[0] = 0x00;
+    h2[0] = 0x11;
+    h3[0] = 0x22;
 
     let mut a = CryptoBitcoinAlgorithm::new();
     let h11 = h1;
@@ -137,20 +136,20 @@ fn test_crypto_bitcoin_node() {
 
     assert_eq!(
         format!("{}", HexSlice::new(h21.as_ref())),
-        "72e03f56a66ff1cdc70fb30bdd74e314cb9cedc1c4f3f934af5d966d489d7e98"
+        "32650049a0418e4380db0af81788635d8b65424d397170b8499cdc28c4d27006"
     );
     assert_eq!(
         format!("{}", HexSlice::new(h22.as_ref())),
-        "c317ce23cf415aad7c7506322135ea47b423ef9e130676afa331ea93430463ea"
+        "30861db96905c8dc8b99398ca1cd5bd5b84ac3264a4e1b3e65afa1bcee7540c4"
     );
     assert_eq!(
         format!("{}", HexSlice::new(h31.as_ref())),
-        "fd75384c491592f4d431d76d83fe0d376afd5600476af29907622b9ce46b1c3c"
+        "d47780c084bad3830bcdaf6eace035e4c6cbf646d103795d22104fb105014ba3"
     );
 
     let t = MerkleTree::from_iter(vec![h1, h2, h3], a);
     assert_eq!(
         format!("{}", HexSlice::new(t.root().as_ref())),
-        "fd75384c491592f4d431d76d83fe0d376afd5600476af29907622b9ce46b1c3c"
+        "d47780c084bad3830bcdaf6eace035e4c6cbf646d103795d22104fb105014ba3"
     );
 }
