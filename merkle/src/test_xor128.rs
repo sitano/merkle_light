@@ -216,7 +216,7 @@ fn test_simple_tree() {
 
         for i in 0..mt.leafs() {
             let p = mt.gen_proof(i);
-            assert!(p.validate(XOR128::new()));
+            assert!(p.validate::<XOR128>());
         }
     }
 }

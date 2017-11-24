@@ -1,7 +1,6 @@
 //! Hash infrastructure for items in Merkle Tree.
 
 use std::hash::Hasher;
-use std::fmt::Debug;
 
 /// A hashable type.
 ///
@@ -112,7 +111,7 @@ const INTERIOR: u8 = 0x01;
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
 pub trait Algorithm<T>: Hasher + Default
 where
-    T: Ord + Clone + Debug,
+    T: Clone,
 {
     /// Writes a single `T` into this hasher.
     #[inline]
