@@ -1,5 +1,4 @@
 use hash::Algorithm;
-use std::fmt::Debug;
 
 /// Merkle tree inclusion proof for data element, for which item = Leaf(Hash(Data Item)).
 ///
@@ -11,12 +10,12 @@ use std::fmt::Debug;
 ///
 /// Proof validation is positioned hash against lemma path to match root hash.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Proof<T: Ord + Clone + Debug> {
+pub struct Proof<T: Eq + Clone> {
     lemma: Vec<T>,
     path: Vec<bool>,
 }
 
-impl<T: Sized + Ord + Clone + Debug> Proof<T> {
+impl<T: Eq + Clone> Proof<T> {
     /// Creates new MT inclusion proof
     pub fn new(hash: Vec<T>, path: Vec<bool>) -> Proof<T> {
         assert!(hash.len() > 2);
@@ -35,20 +34,21 @@ impl<T: Sized + Ord + Clone + Debug> Proof<T> {
     }
 
     /// Verifies MT inclusion proof
-    pub fn validate<A: Algorithm<T>>(&self, mut alg: A) -> bool {
+    pub fn validate<A: Algorithm<T>>(&self) -> bool {
         let size = self.lemma.len();
         if size < 2 {
             return false;
         }
 
         let mut h = self.item();
+        let mut a = A::default();
 
         for i in 1..size - 1 {
-            alg.reset();
+            a.reset();
             h = if self.path[i - 1] {
-                alg.node(h, self.lemma[i].clone())
+                a.node(h, self.lemma[i].clone())
             } else {
-                alg.node(self.lemma[i].clone(), h)
+                a.node(self.lemma[i].clone(), h)
             };
         }
 

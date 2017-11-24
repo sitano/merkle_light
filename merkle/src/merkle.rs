@@ -1,7 +1,6 @@
 use hash::{Hashable, Algorithm};
 use proof::Proof;
 use std::iter::FromIterator;
-use std::fmt::Debug;
 use std::hash::Hasher;
 use std::ops;
 
@@ -37,14 +36,14 @@ use std::ops;
 ///
 /// TODO: Ord
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct MerkleTree<T: Ord + Clone + Debug, A: Algorithm<T>> {
+pub struct MerkleTree<T: Ord + Clone, A: Algorithm<T>> {
     data: Vec<T>,
     leafs: usize,
     height: usize,
     a: A,
 }
 
-impl<T: Ord + Clone + Debug, A: Algorithm<T> + Hasher + Default> MerkleTree<T, A> {
+impl<T: Ord + Clone, A: Algorithm<T> + Hasher + Default> MerkleTree<T, A> {
     /// Creates new merkle from a sequence of hashes.
     pub fn new<I: IntoIterator<Item = T>>(data: I) -> MerkleTree<T, A> {
         Self::from_hash(data)
@@ -165,8 +164,7 @@ impl<T: Ord + Clone + Debug, A: Algorithm<T> + Hasher + Default> MerkleTree<T, A
     }
 }
 
-impl<T: Ord + Clone + Debug, A: Algorithm<T> + Hasher + Default> FromIterator<T>
-    for MerkleTree<T, A> {
+impl<T: Ord + Clone, A: Algorithm<T> + Hasher + Default> FromIterator<T> for MerkleTree<T, A> {
     /// Creates new merkle tree from an iterator over hashable objects.
     fn from_iter<I: IntoIterator<Item = T>>(into: I) -> Self {
         let iter = into.into_iter();
@@ -203,7 +201,7 @@ impl<T: Ord + Clone + Debug, A: Algorithm<T> + Hasher + Default> FromIterator<T>
     }
 }
 
-impl<T: Ord + Clone + Debug, A: Algorithm<T> + Hasher + Default> ops::Deref for MerkleTree<T, A> {
+impl<T: Ord + Clone, A: Algorithm<T> + Hasher + Default> ops::Deref for MerkleTree<T, A> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
