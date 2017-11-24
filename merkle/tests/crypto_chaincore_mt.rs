@@ -93,14 +93,13 @@ fn test_crypto_chaincore_node() {
     let mut h1 = [0u8; 32];
     let mut h2 = [0u8; 32];
     let mut h3 = [0u8; 32];
-    // can't hash 0 as h0 is 0 (neutral element)
-    h1[0] = 0x11;
-    h2[0] = 0x22;
-    h3[0] = 0x33;
+    h1[0] = 0x00;
+    h2[0] = 0x11;
+    h3[0] = 0x22;
 
     let t = MerkleTree::from_iter(vec![h1, h2, h3], CryptoChainCoreAlgorithm::new());
     assert_eq!(
         format!("{}", HexSlice::new(t.root().as_ref())),
-        "105a3b9e90ae49a8da2c0b0b47b32bce8ee9bfba2deabeafdfa888d17661967c"
+        "23704c527ffb21d1b1816938114c2fb0f6e50475d4ab5d07ebff855e7fd20335"
     );
 }

@@ -11,12 +11,12 @@ use std::fmt::Debug;
 ///
 /// Proof validation is positioned hash against lemma path to match root hash.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Proof<T: Ord + Clone + Default + Debug> {
+pub struct Proof<T: Ord + Clone + Debug> {
     lemma: Vec<T>,
     path: Vec<bool>,
 }
 
-impl<T: Sized + Ord + Clone + Default + Debug> Proof<T> {
+impl<T: Sized + Ord + Clone + Debug> Proof<T> {
     /// Creates new MT inclusion proof
     pub fn new(hash: Vec<T>, path: Vec<bool>) -> Proof<T> {
         assert!(hash.len() > 2);
