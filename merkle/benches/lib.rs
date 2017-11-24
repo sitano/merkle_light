@@ -112,7 +112,7 @@ fn bench_from_data_small_proof(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_small_str_proof_check(b: &mut Bencher) {
+fn bench_from_data_small_proof_check(b: &mut Bencher) {
     let values = vec!["one", "two", "three", "four"];
     let tree: MerkleTree<Hash512, A> = MerkleTree::from_data(values.clone());
     let proofs = (0..values.len())
