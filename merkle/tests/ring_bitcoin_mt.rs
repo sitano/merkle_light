@@ -6,9 +6,10 @@ extern crate merkle_light;
 
 use merkle_light::hash::{Algorithm, Hashable};
 use merkle_light::merkle::MerkleTree;
-use std::hash::Hasher;
 use ring::digest::{Context, SHA256};
 use std::fmt;
+use std::hash::Hasher;
+use std::iter::FromIterator;
 
 #[derive(Clone)]
 struct RingBitcoinAlgorithm(Context);
@@ -166,7 +167,8 @@ fn test_ring_bitcoin_node() {
         "d47780c084bad3830bcdaf6eace035e4c6cbf646d103795d22104fb105014ba3"
     );
 
-    let t = MerkleTree::from_iter(vec![h1, h2, h3], a);
+    let t: MerkleTree<RingSHA256Hash, RingBitcoinAlgorithm> =
+        MerkleTree::from_iter(vec![h1, h2, h3]);
     assert_eq!(
         format!("{}", HexSlice::new(t.root().as_ref())),
         "d47780c084bad3830bcdaf6eace035e4c6cbf646d103795d22104fb105014ba3"

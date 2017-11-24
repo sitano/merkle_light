@@ -6,12 +6,13 @@ use merkle::next_pow2;
 use merkle::log2_pow2;
 use std::fmt;
 use std::hash::Hasher;
+use std::iter::FromIterator;
 
 const SIZE: usize = 0x10;
 
 type Item = [u8; SIZE];
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 struct XOR128 {
     data: Item,
     i: usize,
@@ -91,7 +92,7 @@ fn test_hasher_light() {
 #[test]
 fn test_from_slice() {
     let x = [String::from("ars"), String::from("zxc")];
-    let mt = MerkleTree::from_data(&x, XOR128::new());
+    let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::from_data(&x);
     assert_eq!(
         mt.as_slice(),
         [
@@ -112,14 +113,11 @@ fn test_from_slice() {
 #[test]
 fn test_from_iter() {
     let mut a = XOR128::new();
-    let mt = MerkleTree::from_iter(
-        ["a", "b", "c"].iter().map(|x| {
-            a.reset();
-            x.hash(&mut a);
-            a.hash()
-        }),
-        XOR128::new(),
-    );
+    let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::from_iter(["a", "b", "c"].iter().map(|x| {
+        a.reset();
+        x.hash(&mut a);
+        a.hash()
+    }));
     assert_eq!(mt.len(), 7);
     assert_eq!(mt.height(), 3);
 }
@@ -200,7 +198,7 @@ fn test_simple_tree() {
     ];
     for items in 2..8 {
         let mut a = XOR128::new();
-        let mt = MerkleTree::from_iter(
+        let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::from_iter(
             [1, 2, 3, 4, 5, 6, 7, 8]
                 .iter()
                 .map(|x| {
@@ -209,7 +207,6 @@ fn test_simple_tree() {
                     a.hash()
                 })
                 .take(items),
-            XOR128::new(),
         );
 
         assert_eq!(mt.leafs(), items);
