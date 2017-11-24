@@ -70,17 +70,19 @@ impl<T: Ord + Clone + Debug, A: Algorithm<T> + Hasher + Default> MerkleTree<T, A
     fn build(&mut self) {
         let mut width = self.leafs;
 
-        // if there is odd num of elements, fill in to the even
-        if width & 1 == 1 {
-            let he = self.data[width - 1].clone();
-            self.data.push(he);
-            width += 1;
-        }
-
         // build tree
         let mut i: usize = 0;
         let mut j: usize = width;
-        while width > 2 {
+        while width > 1 {
+            // if there is odd num of elements, fill in to the even
+            if width & 1 == 1 {
+                let he = self.data[self.len() - 1].clone();
+                self.data.push(he);
+                width += 1;
+                j += 1;
+            }
+
+            // next shift
             while i < j {
                 let h = self.a.node(self.data[i].clone(), self.data[i + 1].clone());
                 self.data.push(h);
@@ -88,18 +90,8 @@ impl<T: Ord + Clone + Debug, A: Algorithm<T> + Hasher + Default> MerkleTree<T, A
             }
 
             width >>= 1;
-            if width & 1 == 1 {
-                let he = self.data[self.data.len() - 1].clone();
-                self.data.push(he);
-                width += 1;
-            }
-
             j += width;
         }
-
-        // root
-        let h = self.a.node(self.data[i].clone(), self.data[i + 1].clone());
-        self.data.push(h);
     }
 
     /// Generate merkle tree inclusion proof for leaf `i`
