@@ -36,8 +36,6 @@ use std::ops;
 /// will be nil.
 ///
 /// TODO: Ord
-/// TODO: Explicit Iterator
-/// TODO: replace `from_iter<Into>` wiht `Iter`
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MerkleTree<T: Ord + Clone + Debug, A: Algorithm<T>> {
     data: Vec<T>,
@@ -48,19 +46,19 @@ pub struct MerkleTree<T: Ord + Clone + Debug, A: Algorithm<T>> {
 
 impl<T: Ord + Clone + Debug, A: Algorithm<T> + Hasher + Default> MerkleTree<T, A> {
     /// Creates new merkle from a sequence of hashes.
-    pub fn new(data: &[T]) -> MerkleTree<T, A> {
+    pub fn new<I: IntoIterator<Item = T>>(data: I) -> MerkleTree<T, A> {
         Self::from_hash(data)
     }
 
     /// Creates new merkle from a sequence of hashes.
-    pub fn from_hash(data: &[T]) -> MerkleTree<T, A> {
-        Self::from_iter(data.iter().cloned())
+    pub fn from_hash<I: IntoIterator<Item = T>>(data: I) -> MerkleTree<T, A> {
+        Self::from_iter(data)
     }
 
     /// Creates new merkle tree from a list of hashable objects.
-    pub fn from_data<O: Hashable<A>>(data: &[O]) -> MerkleTree<T, A> {
+    pub fn from_data<O: Hashable<A>, I: IntoIterator<Item = O>>(data: I) -> MerkleTree<T, A> {
         let mut a = A::default();
-        Self::from_iter(data.iter().map(|x| {
+        Self::from_iter(data.into_iter().map(|x| {
             a.reset();
             x.hash(&mut a);
             a.hash()
