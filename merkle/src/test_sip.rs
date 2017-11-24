@@ -6,6 +6,7 @@ use merkle::next_pow2;
 use merkle::log2_pow2;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
+use std::iter::FromIterator;
 
 type Item = u64;
 
@@ -99,7 +100,7 @@ fn test_simple_tree() {
     ];
     for items in 2..8 {
         let mut a = DefaultHasher::new();
-        let mt = MerkleTree::from_iter(
+        let mt: MerkleTree<u64, DefaultHasher> = MerkleTree::from_iter(
             [1, 2, 3, 4, 5, 6, 7, 8]
                 .iter()
                 .map(|x| {
@@ -108,7 +109,6 @@ fn test_simple_tree() {
                     a.hash()
                 })
                 .take(items),
-            DefaultHasher::new(),
         );
 
         assert_eq!(mt.leafs(), items);

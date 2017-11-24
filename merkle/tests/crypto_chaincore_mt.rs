@@ -6,6 +6,7 @@ extern crate merkle_light;
 
 use std::fmt;
 use std::hash::Hasher;
+use std::iter::FromIterator;
 use merkle_light::hash::{Algorithm, Hashable};
 use merkle_light::merkle::MerkleTree;
 use crypto::sha3::{Sha3, Sha3Mode};
@@ -97,7 +98,8 @@ fn test_crypto_chaincore_node() {
     h2[0] = 0x11;
     h3[0] = 0x22;
 
-    let t = MerkleTree::from_iter(vec![h1, h2, h3], CryptoChainCoreAlgorithm::new());
+    let t: MerkleTree<CryptoSHA256Hash, CryptoChainCoreAlgorithm> =
+        MerkleTree::from_iter(vec![h1, h2, h3]);
     assert_eq!(
         format!("{}", HexSlice::new(t.root().as_ref())),
         "23704c527ffb21d1b1816938114c2fb0f6e50475d4ab5d07ebff855e7fd20335"

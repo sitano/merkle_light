@@ -110,7 +110,7 @@ const INTERIOR: u8 = 0x01;
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
-pub trait Algorithm<T>: Hasher
+pub trait Algorithm<T>: Hasher + Default
 where
     T: Ord + Clone + Debug,
 {
@@ -123,7 +123,10 @@ where
     fn hash(&mut self) -> T;
 
     /// Reset Hasher state.
-    fn reset(&mut self);
+    #[inline]
+    fn reset(&mut self) {
+        *self = Self::default();
+    }
 
     /// Returns the hash value for MT leaf (prefix 0x00).
     fn leaf(&mut self, leaf: T) -> T {

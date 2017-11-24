@@ -4,22 +4,17 @@ use hash::{Hashable, Algorithm};
 use merkle::MerkleTree;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
+use std::iter::FromIterator;
 
 type Item = u64;
 
 /// Custom merkle hash util test
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct CMH(DefaultHasher);
 
 impl CMH {
     pub fn new() -> CMH {
         CMH(DefaultHasher::new())
-    }
-}
-
-impl Default for CMH {
-    fn default() -> CMH {
-        CMH::new()
     }
 }
 
@@ -70,14 +65,11 @@ impl Algorithm<Item> for CMH {
 #[test]
 fn test_custom_merkle_hasher() {
     let mut a = CMH::new();
-    let mt = MerkleTree::from_iter(
-        [1, 2, 3, 4, 5].iter().map(|x| {
-            a.reset();
-            x.hash(&mut a);
-            a.hash()
-        }),
-        CMH::new(),
-    );
+    let mt: MerkleTree<Item, CMH> = MerkleTree::from_iter([1, 2, 3, 4, 5].iter().map(|x| {
+        a.reset();
+        x.hash(&mut a);
+        a.hash()
+    }));
 
     assert_eq!(
         mt.as_slice()
