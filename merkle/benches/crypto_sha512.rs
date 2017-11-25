@@ -94,14 +94,14 @@ fn read_u64v_be(dst: &mut [u64], input: &[u8]) {
 }
 
 #[bench]
-fn bench_from_data_small(b: &mut Bencher) {
+fn bench_crypto_sha512_from_data_5(b: &mut Bencher) {
     let values = vec!["one", "two", "three", "four"];
 
     b.iter(|| MerkleTree::<Hash512, A>::from_data(values.clone()));
 }
 
 #[bench]
-fn bench_from_data_small_proof(b: &mut Bencher) {
+fn bench_crypto_sha512_from_data_5_proof(b: &mut Bencher) {
     let values = vec!["one", "two", "three", "four"];
     let tree: MerkleTree<Hash512, A> = MerkleTree::from_data(values.clone());
 
@@ -112,7 +112,7 @@ fn bench_from_data_small_proof(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_from_data_small_proof_check(b: &mut Bencher) {
+fn bench_crypto_sha512_from_data_5_proof_check(b: &mut Bencher) {
     let values = vec!["one", "two", "three", "four"];
     let tree: MerkleTree<Hash512, A> = MerkleTree::from_data(values.clone());
     let proofs = (0..values.len())
