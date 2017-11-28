@@ -47,16 +47,19 @@ impl Hasher for XOR128 {
 }
 
 impl Algorithm<Item> for XOR128 {
+    #[inline]
+    fn write(&mut self, msg: &[u8]) {
+        <Self as Hasher>::write(self, msg)
+    }
+
+    #[inline]
     fn hash(&mut self) -> [u8; 16] {
         self.data
     }
 
+    #[inline]
     fn reset(&mut self) {
         *self = XOR128::new();
-    }
-
-    fn write_t(&mut self, i: Item) {
-        self.write(i.as_ref());
     }
 }
 

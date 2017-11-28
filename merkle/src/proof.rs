@@ -10,12 +10,12 @@ use hash::Algorithm;
 ///
 /// Proof validation is positioned hash against lemma path to match root hash.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Proof<T: Eq + Clone> {
+pub struct Proof<T: Eq + Clone+AsRef<[u8]>> {
     lemma: Vec<T>,
     path: Vec<bool>,
 }
 
-impl<T: Eq + Clone> Proof<T> {
+impl<T: Eq + Clone+AsRef<[u8]>> Proof<T> {
     /// Creates new MT inclusion proof
     pub fn new(hash: Vec<T>, path: Vec<bool>) -> Proof<T> {
         assert!(hash.len() > 2);

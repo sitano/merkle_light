@@ -5,8 +5,7 @@ use merkle::MerkleTree;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-
-type Item = u64;
+use test_item::Item;
 
 /// Custom merkle hash util test
 #[derive(Debug, Clone, Default)]
@@ -21,7 +20,7 @@ impl CMH {
 impl Hasher for CMH {
     #[inline]
     fn write(&mut self, msg: &[u8]) {
-        self.0.write(msg)
+        <Hasher>::write(&mut self.0, msg)
     }
 
     #[inline]
@@ -32,8 +31,13 @@ impl Hasher for CMH {
 
 impl Algorithm<Item> for CMH {
     #[inline]
+    fn write(&mut self, msg: &[u8]) {
+        <Hasher>::write(&mut self.0, msg)
+    }
+
+    #[inline]
     fn hash(&mut self) -> Item {
-        self.finish()
+        Item(self.finish())
     }
 
     #[inline]
@@ -42,23 +46,18 @@ impl Algorithm<Item> for CMH {
     }
 
     #[inline]
-    fn write_t(&mut self, i: Item) {
-        self.write_u64(i)
-    }
-
-    #[inline]
     fn leaf(&mut self, leaf: Item) -> Item {
-        leaf & 0xff
+        Item(leaf.0 & 0xff)
     }
 
     #[inline]
     fn node(&mut self, left: Item, right: Item) -> Item {
         self.reset();
-        self.write_u8(1);
-        self.write_t(left);
-        self.write_u8(2);
-        self.write_t(right);
-        self.hash() & 0xffff
+        <Self as Algorithm<_>>::write(self, &[1u8]);
+        <Self as Algorithm<_>>::write(self, left.as_ref());
+        <Self as Algorithm<_>>::write(self, &[2u8]);
+        <Self as Algorithm<_>>::write(self, right.as_ref());
+        Item(self.hash().0 & 0xffff)
     }
 }
 
@@ -75,9 +74,9 @@ fn test_custom_merkle_hasher() {
         mt.as_slice()
             .iter()
             .take(mt.leafs())
-            .filter(|&&x| x > 255)
+            .filter(|&&x| x.0 > 255)
             .count(),
         0
     );
-    assert_eq!(mt.as_slice().iter().filter(|&&x| x > 65535).count(), 0);
+    assert_eq!(mt.as_slice().iter().filter(|&&x| x.0 > 65535).count(), 0);
 }
