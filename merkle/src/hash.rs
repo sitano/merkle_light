@@ -101,21 +101,19 @@ const LEAF: u8 = 0x00;
 /// MT interior node hash prefix
 const INTERIOR: u8 = 0x01;
 
-/// Hashing algorithm type.
-///
-/// Algorithm conforms standard [`Hasher`] trait and provides methods to return
-/// hash and resetting current state.
+/// A trait for hashing an arbitrary stream of bytes for calculating merkle tree
+/// nodes.
 ///
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
-pub trait Algorithm<T>: Hasher + Default
+pub trait Algorithm<T>: Default
 where
-    T: Clone,
+    T: Clone+AsRef<[u8]>,
 {
-    /// Writes a single `T` into this hasher.
+    /// Writes some data into hashing state.
     #[inline]
-    fn write_t(&mut self, i: T);
+    fn write(&mut self, bytes: &[u8]);
 
     /// Returns the hash value for the data stream written so far.
     #[inline]
@@ -130,17 +128,17 @@ where
     /// Returns the hash value for MT leaf (prefix 0x00).
     fn leaf(&mut self, leaf: T) -> T {
         self.reset();
-        self.write_u8(LEAF);
-        self.write_t(leaf);
+        self.write(&[LEAF]);
+        self.write(leaf.as_ref());
         self.hash()
     }
 
     /// Returns the hash value for MT interior node (prefix 0x01).
     fn node(&mut self, left: T, right: T) -> T {
         self.reset();
-        self.write_u8(INTERIOR);
-        self.write_t(left);
-        self.write_t(right);
+        self.write(&[INTERIOR]);
+        self.write(left.as_ref());
+        self.write(right.as_ref());
         self.hash()
     }
 }

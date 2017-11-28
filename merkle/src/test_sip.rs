@@ -7,20 +7,22 @@ use merkle::log2_pow2;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-
-type Item = u64;
+use test_item::Item;
 
 impl Algorithm<Item> for DefaultHasher {
-    fn hash(&mut self) -> Item {
-        self.finish()
+    #[inline]
+    fn write(&mut self, msg: &[u8]) {
+        <Self as Hasher>::write(self, msg.as_ref())
     }
 
+    #[inline]
+    fn hash(&mut self) -> Item {
+        Item(self.finish())
+    }
+
+    #[inline]
     fn reset(&mut self) {
         *self = DefaultHasher::default()
-    }
-
-    fn write_t(&mut self, i: Item) {
-        self.write_u64(i)
     }
 }
 
@@ -100,7 +102,7 @@ fn test_simple_tree() {
     ];
     for items in 2..8 {
         let mut a = DefaultHasher::new();
-        let mt: MerkleTree<u64, DefaultHasher> = MerkleTree::from_iter(
+        let mt: MerkleTree<Item, DefaultHasher> = MerkleTree::from_iter(
             [1, 2, 3, 4, 5, 6, 7, 8]
                 .iter()
                 .map(|x| {

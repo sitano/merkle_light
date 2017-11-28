@@ -170,6 +170,10 @@ pub mod proof;
 /// Merkle tree abstractions, implementation and algorithms.
 pub mod merkle;
 
+/// Tests data.
+#[cfg(test)]
+mod test_item;
+
 /// Tests XOR128.
 #[cfg(test)]
 mod test_xor128;
