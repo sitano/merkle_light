@@ -43,16 +43,15 @@ extern crate merkle_light;
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-use merkle_light::hash::{Algorithm, Hashable};
-use merkle_light::merkle::MerkleTree;
 use crypto::sha3::{Sha3, Sha3Mode};
 use crypto::digest::Digest;
+use merkle_light::hash::{Algorithm, Hashable};
+use merkle_light::merkle::MerkleTree;
 
-#[derive(Clone)]
-struct ExampleAlgorithm(Sha3);
+pub struct ExampleAlgorithm(Sha3);
 
 impl ExampleAlgorithm {
-    fn new() -> ExampleAlgorithm {
+    pub fn new() -> ExampleAlgorithm {
         ExampleAlgorithm(Sha3::new(Sha3Mode::Sha3_256))
     }
 }
@@ -71,29 +70,32 @@ impl Hasher for ExampleAlgorithm {
 
     #[inline]
     fn finish(&self) -> u64 {
-        0
+        unimplemented!()
     }
 }
 
 impl Hashable<ExampleAlgorithm> for [u8; 32] {
     fn hash(&self, state: &mut ExampleAlgorithm) {
-        state.write(self.as_ref())
+        Hasher::write(state, self.as_ref())
     }
 }
 
 impl Algorithm<[u8; 32]> for ExampleAlgorithm {
+    #[inline]
+    fn write(&mut self, data: &[u8]) {
+        self.0.input(data);
+    }
+
+    #[inline]
     fn hash(&mut self) -> [u8; 32] {
         let mut h = [0u8; 32];
         self.0.result(&mut h);
         h
     }
 
+    #[inline]
     fn reset(&mut self) {
         self.0.reset();
-    }
-
-    fn write_t(&mut self, i: [u8; 32]) {
-        self.0.input(i.as_ref());
     }
 }
 
