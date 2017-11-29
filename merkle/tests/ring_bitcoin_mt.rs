@@ -34,19 +34,18 @@ impl Hasher for RingBitcoinAlgorithm {
 
     #[inline]
     fn finish(&self) -> u64 {
-        0
+        unimplemented!()
     }
 }
 
 type RingSHA256Hash = [u8; 32];
 
-impl Hashable<RingBitcoinAlgorithm> for RingSHA256Hash {
-    fn hash(&self, state: &mut RingBitcoinAlgorithm) {
-        state.write(self.as_ref())
-    }
-}
-
 impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
+    #[inline]
+    fn write(&mut self, data: &[u8]) {
+        self.0.update(data);
+    }
+
     /// ring.Context is not reusable after finalization (finish(self)),
     /// and having hash(&self) requires first to clone() the context.
     /// The context can't be moved away out of the struct field to
@@ -73,11 +72,6 @@ impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
     #[inline]
     fn reset(&mut self) {
         self.0 = Context::new(&SHA256);
-    }
-
-    #[inline]
-    fn write_t(&mut self, i: RingSHA256Hash) {
-        self.0.update(i.as_ref());
     }
 
     fn leaf(&mut self, leaf: RingSHA256Hash) -> RingSHA256Hash {

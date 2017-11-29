@@ -7,7 +7,7 @@ extern crate merkle_light;
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-use merkle_light::hash::{Algorithm, Hashable};
+use merkle_light::hash::Algorithm;
 use merkle_light::merkle::MerkleTree;
 use crypto::sha3::{Sha3, Sha3Mode};
 use crypto::digest::Digest;
@@ -35,19 +35,18 @@ impl Hasher for CryptoChainCoreAlgorithm {
 
     #[inline]
     fn finish(&self) -> u64 {
-        0
+        unimplemented!()
     }
 }
 
 type CryptoSHA256Hash = [u8; 32];
 
-impl Hashable<CryptoChainCoreAlgorithm> for CryptoSHA256Hash {
-    fn hash(&self, state: &mut CryptoChainCoreAlgorithm) {
-        state.write(self.as_ref())
-    }
-}
-
 impl Algorithm<CryptoSHA256Hash> for CryptoChainCoreAlgorithm {
+    #[inline]
+    fn write(&mut self, data: &[u8]) {
+        self.0.input(data);
+    }
+
     #[inline]
     fn hash(&mut self) -> CryptoSHA256Hash {
         let mut h = [0u8; 32];
@@ -58,11 +57,6 @@ impl Algorithm<CryptoSHA256Hash> for CryptoChainCoreAlgorithm {
     #[inline]
     fn reset(&mut self) {
         self.0.reset();
-    }
-
-    #[inline]
-    fn write_t(&mut self, i: CryptoSHA256Hash) {
-        self.0.input(i.as_ref());
     }
 }
 

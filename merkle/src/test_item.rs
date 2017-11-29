@@ -9,9 +9,7 @@ pub struct Item(pub u64);
 
 impl AsRef<[u8]> for Item {
     fn as_ref(&self) -> &[u8] {
-        unsafe {
-            slice::from_raw_parts(mem::transmute(&self.0), 8)
-        }
+        unsafe { slice::from_raw_parts(mem::transmute(&self.0), 8) }
     }
 }
 

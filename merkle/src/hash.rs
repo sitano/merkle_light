@@ -60,8 +60,8 @@ use std::hash::Hasher;
 ///        phone: 2,
 ///    };
 ///
-///    let hr = &mut DefaultHasher::new();
-///    foo.hash(hr);
+///    let mut hr = DefaultHasher::new();
+///    foo.hash(&mut hr);
 ///    assert_eq!(hr.finish(), 7101638158313343130)
 /// }
 /// ```
@@ -109,7 +109,7 @@ const INTERIOR: u8 = 0x01;
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
 pub trait Algorithm<T>: Default
 where
-    T: Clone+AsRef<[u8]>,
+    T: Clone + AsRef<[u8]>,
 {
     /// Writes some data into hashing state.
     #[inline]

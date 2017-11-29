@@ -35,19 +35,18 @@ impl Hasher for CryptoBitcoinAlgorithm {
 
     #[inline]
     fn finish(&self) -> u64 {
-        0
+        unimplemented!()
     }
 }
 
 type CryptoSHA256Hash = [u8; 32];
 
-impl Hashable<CryptoBitcoinAlgorithm> for CryptoSHA256Hash {
-    fn hash(&self, state: &mut CryptoBitcoinAlgorithm) {
-        state.write(self.as_ref())
-    }
-}
-
 impl Algorithm<CryptoSHA256Hash> for CryptoBitcoinAlgorithm {
+    #[inline]
+    fn write(&mut self, data: &[u8]) {
+        self.0.input(data);
+    }
+
     #[inline]
     fn hash(&mut self) -> CryptoSHA256Hash {
         let mut h = [0u8; 32];
@@ -65,19 +64,14 @@ impl Algorithm<CryptoSHA256Hash> for CryptoBitcoinAlgorithm {
         self.0.reset();
     }
 
-    #[inline]
-    fn write_t(&mut self, i: CryptoSHA256Hash) {
-        self.0.input(i.as_ref());
-    }
-
     fn leaf(&mut self, leaf: CryptoSHA256Hash) -> CryptoSHA256Hash {
         leaf
     }
 
     fn node(&mut self, left: CryptoSHA256Hash, right: CryptoSHA256Hash) -> CryptoSHA256Hash {
         self.reset();
-        self.write(left.as_ref());
-        self.write(right.as_ref());
+        <Self as Algorithm<_>>::write(self, left.as_ref());
+        <Self as Algorithm<_>>::write(self, right.as_ref());
         self.hash()
     }
 }

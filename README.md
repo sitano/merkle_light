@@ -14,7 +14,7 @@
 - standard types hasher implementations
 - `#[derive(Hashable)]` support for simple struct
 - customizable merkle leaf/node hashing algorithm
-- support for custom hash types without `AsRef[u8]` (e.g. [u8; 16], [u64; 4])
+- support for custom hash types (e.g. [u8; 16], [u64; 4], [u128; 2], struct)
 - customizable hashing algorithm
 - linear memory layout, no nodes on heap
 - buildable from iterator, objects or hashes

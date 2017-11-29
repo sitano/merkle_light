@@ -2,12 +2,13 @@
 //!
 //! Merkle tree (MT) implemented as a full binary tree allocated as a vec
 //! of statically sized hashes to give hashes more locality. MT specialized
-//! to the extent of hashing algorithm and hash item, compatible to the
-//! `std::hash::Hasher` and supports custom hash algorithms.
-//! Implementation does not depend on any external crypto libraries,
-//! and tries to be as performant, as possible.
+//! to the extent of hashing algorithm and hash item. [`Hashable`] trait is
+//! compatible to the `std::hash::Hasher` and supports custom hash algorithms.
+//! Implementation does not depend on any external crypto libraries, and tries
+//! to be as performant as possible.
 //!
 //! This tree implementation uses encoding scheme as in _Certificate Transparency_
+//! by default. Encoding scheme for leafs and nodes can be overridden though.
 //! [RFC 6962](https://tools.ietf.org/html/rfc6962):
 //!
 //! ```text
@@ -22,10 +23,10 @@
 //!
 //! # Implementation choices
 //!
-//! Main idea was that the whole code must obtain specialization at compile
-//! time, hashes must be fixed size arrays known at compile time, hash algorithm
-//! must be interface (lib should not dep on crypto libs) and lib must somehow
-//! mimic std Rust api.
+//! Main idea is the whole code must obtain specialization at compile time with
+//! minimum allocations calls, hashes must be of fixed size arrays known at
+//! compile time, hash algorithm must be a trait and must not depend on any
+//! external cryptographic libraries and the lib itself must somehow mimic std Rust api.
 //!
 //! Standard way in Rust is to hash objects with a `std::hash::Hasher`, and mainly
 //! that is the reason behind the choice of the abstractions:
@@ -44,6 +45,10 @@
 //! into unusable. `ring` libra tho contains interfaces incompatible to
 //! `start-update-finish-reset` lifecycle. It requires either `cloning()` its state
 //! on finalization, or `Cell`-ing via unsafe.
+//!
+//! Turning back to having [`Algorithm.write(&mut self, &[u8])`] instead of
+//! `write(T)` allows to relax [`Algorithm`] trait [`Hasher`] constraint, even tho
+//! works together well still.
 //!
 //! # Interface
 //!
@@ -101,29 +106,32 @@
 //!
 //!         #[inline]
 //!         fn finish(&self) -> u64 {
-//!             0
+//!             unimplemented!()
 //!         }
 //!     }
 //!
 //!     impl Hashable<ExampleAlgorithm> for [u8; 32] {
 //!         fn hash(&self, state: &mut ExampleAlgorithm) {
-//!             state.write(self.as_ref())
+//!             Hasher::write(state, self.as_ref())
 //!         }
 //!     }
 //!
 //!     impl Algorithm<[u8; 32]> for ExampleAlgorithm {
+//!         #[inline]
+//!         fn write(&mut self, data: &[u8]) {
+//!             self.0.input(data);
+//!         }
+//!
+//!         #[inline]
 //!         fn hash(&mut self) -> [u8; 32] {
 //!             let mut h = [0u8; 32];
 //!             self.0.result(&mut h);
 //!             h
 //!         }
 //!
+//!         #[inline]
 //!         fn reset(&mut self) {
 //!             self.0.reset();
-//!         }
-//!
-//!         fn write_t(&mut self, i: [u8; 32]) {
-//!             self.0.input(i.as_ref());
 //!         }
 //!     }
 //! }
