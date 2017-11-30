@@ -11,11 +11,6 @@ use test_item::Item;
 
 impl Algorithm<Item> for DefaultHasher {
     #[inline]
-    fn write(&mut self, msg: &[u8]) {
-        <Self as Hasher>::write(self, msg.as_ref())
-    }
-
-    #[inline]
     fn hash(&mut self) -> Item {
         Item(self.finish())
     }

@@ -36,22 +36,11 @@ impl Hasher for XOR128 {
     }
 
     fn finish(&self) -> u64 {
-        let mut h: u64 = 0;
-        let mut off: u64 = 0;
-        for i in 0..8 {
-            h |= (u64::from(self.data[i])) << off;
-            off += 8;
-        }
-        h
+        unimplemented!()
     }
 }
 
 impl Algorithm<Item> for XOR128 {
-    #[inline]
-    fn write(&mut self, msg: &[u8]) {
-        <Self as Hasher>::write(self, msg)
-    }
-
     #[inline]
     fn hash(&mut self) -> [u8; 16] {
         self.data

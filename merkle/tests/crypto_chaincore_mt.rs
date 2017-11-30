@@ -43,11 +43,6 @@ type CryptoSHA256Hash = [u8; 32];
 
 impl Algorithm<CryptoSHA256Hash> for CryptoChainCoreAlgorithm {
     #[inline]
-    fn write(&mut self, data: &[u8]) {
-        self.0.input(data);
-    }
-
-    #[inline]
     fn hash(&mut self) -> CryptoSHA256Hash {
         let mut h = [0u8; 32];
         self.0.result(&mut h);
