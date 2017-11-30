@@ -11,7 +11,7 @@ extern crate merkle_light;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-use merkle_light::hash::{Algorithm, Hashable};
+use merkle_light::hash::Algorithm;
 use merkle_light::merkle::MerkleTree;
 use std::hash::Hasher;
 use std::cmp::Ordering;
@@ -101,18 +101,7 @@ impl Hasher for A {
     }
 }
 
-impl Hashable<A> for Hash512 {
-    fn hash(&self, state: &mut A) {
-        state.0.input(self.as_ref())
-    }
-}
-
 impl Algorithm<Hash512> for A {
-    #[inline]
-    fn write(&mut self, data: &[u8]) {
-        self.0.input(data);
-    }
-
     #[inline]
     fn hash(&mut self) -> Hash512 {
         let mut h = [0u8; 64];
