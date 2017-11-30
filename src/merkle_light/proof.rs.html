@@ -102,7 +102,6 @@
 <span id="57">57</span>
 </pre><pre class="rust ">
 <span class="kw">use</span> <span class="ident">hash</span>::<span class="ident">Algorithm</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span>;
 
 <span class="doccomment">/// Merkle tree inclusion proof for data element, for which item = Leaf(Hash(Data Item)).</span>
 <span class="doccomment">///</span>
@@ -114,12 +113,12 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// Proof validation is positioned hash against lemma path to match root hash.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Proof</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Ord</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Debug</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Proof</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">AsRef</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;&gt;</span> {
     <span class="ident">lemma</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="ident">path</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Ord</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Debug</span><span class="op">&gt;</span> <span class="ident">Proof</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">AsRef</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;&gt;</span> <span class="ident">Proof</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Creates new MT inclusion proof</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">hash</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">path</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">Proof</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">hash</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">2</span>);
@@ -138,20 +137,21 @@
     }
 
     <span class="doccomment">/// Verifies MT inclusion proof</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validate</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">Algorithm</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">alg</span>: <span class="ident">A</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validate</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">Algorithm</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">lemma</span>.<span class="ident">len</span>();
         <span class="kw">if</span> <span class="ident">size</span> <span class="op">&lt;</span> <span class="number">2</span> {
             <span class="kw">return</span> <span class="bool-val">false</span>;
         }
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">h</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">item</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">A</span>::<span class="ident">default</span>();
 
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">size</span> <span class="op">-</span> <span class="number">1</span> {
-            <span class="ident">alg</span>.<span class="ident">reset</span>();
+            <span class="ident">a</span>.<span class="ident">reset</span>();
             <span class="ident">h</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">path</span>[<span class="ident">i</span> <span class="op">-</span> <span class="number">1</span>] {
-                <span class="ident">alg</span>.<span class="ident">node</span>(<span class="ident">h</span>, <span class="self">self</span>.<span class="ident">lemma</span>[<span class="ident">i</span>].<span class="ident">clone</span>())
+                <span class="ident">a</span>.<span class="ident">node</span>(<span class="ident">h</span>, <span class="self">self</span>.<span class="ident">lemma</span>[<span class="ident">i</span>].<span class="ident">clone</span>())
             } <span class="kw">else</span> {
-                <span class="ident">alg</span>.<span class="ident">node</span>(<span class="self">self</span>.<span class="ident">lemma</span>[<span class="ident">i</span>].<span class="ident">clone</span>(), <span class="ident">h</span>)
+                <span class="ident">a</span>.<span class="ident">node</span>(<span class="self">self</span>.<span class="ident">lemma</span>[<span class="ident">i</span>].<span class="ident">clone</span>(), <span class="ident">h</span>)
             };
         }
 

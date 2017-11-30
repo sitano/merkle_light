@@ -218,17 +218,33 @@
 <span id="173">173</span>
 <span id="174">174</span>
 <span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
 </pre><pre class="rust ">
 <span class="doccomment">//! light _Merkle Tree_ implementation.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Merkle tree (MT) implemented as a full binary tree allocated as a vec</span>
 <span class="doccomment">//! of statically sized hashes to give hashes more locality. MT specialized</span>
-<span class="doccomment">//! to the extent of hashing algorithm and hash item, compatible to the</span>
-<span class="doccomment">//! `std::hash::Hasher` and supports custom hash algorithms.</span>
-<span class="doccomment">//! Implementation does not depend on any external crypto libraries,</span>
-<span class="doccomment">//! and tries to be as performant, as possible.</span>
+<span class="doccomment">//! to the extent of hashing algorithm and hash item. [`Hashable`] trait is</span>
+<span class="doccomment">//! compatible to the `std::hash::Hasher` and supports custom hash algorithms.</span>
+<span class="doccomment">//! Implementation does not depend on any external crypto libraries, and tries</span>
+<span class="doccomment">//! to be as performant as possible.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! This tree implementation uses encoding scheme as in _Certificate Transparency_</span>
+<span class="doccomment">//! by default. Encoding scheme for leafs and nodes can be overridden though.</span>
 <span class="doccomment">//! [RFC 6962](https://tools.ietf.org/html/rfc6962):</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```text</span>
@@ -243,10 +259,10 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Implementation choices</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Main idea was that the whole code must obtain specialization at compile</span>
-<span class="doccomment">//! time, hashes must be fixed size arrays known at compile time, hash algorithm</span>
-<span class="doccomment">//! must be interface (lib should not dep on crypto libs) and lib must somehow</span>
-<span class="doccomment">//! mimic std Rust api.</span>
+<span class="doccomment">//! Main idea is the whole code must obtain specialization at compile time with</span>
+<span class="doccomment">//! minimum allocations calls, hashes must be of fixed size arrays known at</span>
+<span class="doccomment">//! compile time, hash algorithm must be a trait and must not depend on any</span>
+<span class="doccomment">//! external cryptographic libraries and the lib itself must somehow mimic std Rust api.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Standard way in Rust is to hash objects with a `std::hash::Hasher`, and mainly</span>
 <span class="doccomment">//! that is the reason behind the choice of the abstractions:</span>
@@ -265,6 +281,10 @@
 <span class="doccomment">//! into unusable. `ring` libra tho contains interfaces incompatible to</span>
 <span class="doccomment">//! `start-update-finish-reset` lifecycle. It requires either `cloning()` its state</span>
 <span class="doccomment">//! on finalization, or `Cell`-ing via unsafe.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Turning back to having [`Algorithm.write(&amp;mut self, &amp;[u8])`] instead of</span>
+<span class="doccomment">//! `write(T)` allows to relax [`Algorithm`] trait [`Hasher`] constraint, even tho</span>
+<span class="doccomment">//! works together well still.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Interface</span>
 <span class="doccomment">//!</span>
@@ -287,24 +307,23 @@
 <span class="doccomment">//! # Quick start</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! #![cfg(feature = &quot;chaincore&quot;)]</span>
-<span class="doccomment">//!</span>
+<span class="doccomment">//! #[cfg(feature = &quot;chaincore&quot;)]</span>
 <span class="doccomment">//! extern crate crypto;</span>
 <span class="doccomment">//! extern crate merkle_light;</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! fn main() {</span>
+<span class="doccomment">//! #[cfg(feature = &quot;chaincore&quot;)]</span>
+<span class="doccomment">//! mod example {</span>
 <span class="doccomment">//!     use std::fmt;</span>
 <span class="doccomment">//!     use std::hash::Hasher;</span>
-<span class="doccomment">//!     use merkle_light::hash::{Algorithm, Hashable};</span>
-<span class="doccomment">//!     use merkle_light::merkle::MerkleTree;</span>
+<span class="doccomment">//!     use std::iter::FromIterator;</span>
 <span class="doccomment">//!     use crypto::sha3::{Sha3, Sha3Mode};</span>
 <span class="doccomment">//!     use crypto::digest::Digest;</span>
+<span class="doccomment">//!     use merkle_light::hash::{Algorithm, Hashable};</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//!     #[derive(Clone)]</span>
-<span class="doccomment">//!     struct ExampleAlgorithm(Sha3);</span>
+<span class="doccomment">//!     pub struct ExampleAlgorithm(Sha3);</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//!     impl ExampleAlgorithm {</span>
-<span class="doccomment">//!         fn new() -&gt; ExampleAlgorithm {</span>
+<span class="doccomment">//!         pub fn new() -&gt; ExampleAlgorithm {</span>
 <span class="doccomment">//!             ExampleAlgorithm(Sha3::new(Sha3Mode::Sha3_256))</span>
 <span class="doccomment">//!         }</span>
 <span class="doccomment">//!     }</span>
@@ -323,31 +342,37 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//!         #[inline]</span>
 <span class="doccomment">//!         fn finish(&amp;self) -&gt; u64 {</span>
-<span class="doccomment">//!             0</span>
+<span class="doccomment">//!             unimplemented!()</span>
 <span class="doccomment">//!         }</span>
 <span class="doccomment">//!     }</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//!     impl Hashable&lt;ExampleAlgorithm&gt; for [u8; 32] {</span>
 <span class="doccomment">//!         fn hash(&amp;self, state: &amp;mut ExampleAlgorithm) {</span>
-<span class="doccomment">//!             state.write(self.as_ref())</span>
+<span class="doccomment">//!             Hasher::write(state, self.as_ref())</span>
 <span class="doccomment">//!         }</span>
 <span class="doccomment">//!     }</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//!     impl Algorithm&lt;[u8; 32]&gt; for ExampleAlgorithm {</span>
+<span class="doccomment">//!         #[inline]</span>
 <span class="doccomment">//!         fn hash(&amp;mut self) -&gt; [u8; 32] {</span>
 <span class="doccomment">//!             let mut h = [0u8; 32];</span>
 <span class="doccomment">//!             self.0.result(&amp;mut h);</span>
 <span class="doccomment">//!             h</span>
 <span class="doccomment">//!         }</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//!         #[inline]</span>
 <span class="doccomment">//!         fn reset(&amp;mut self) {</span>
 <span class="doccomment">//!             self.0.reset();</span>
 <span class="doccomment">//!         }</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//!         fn write_t(&amp;mut self, i: [u8; 32]) {</span>
-<span class="doccomment">//!             self.0.input(i.as_ref());</span>
-<span class="doccomment">//!         }</span>
 <span class="doccomment">//!     }</span>
+<span class="doccomment">//! }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! fn main() {</span>
+<span class="doccomment">//! #[cfg(feature = &quot;chaincore&quot;)]</span>
+<span class="doccomment">//! {</span>
+<span class="doccomment">//!     use example::ExampleAlgorithm;</span>
+<span class="doccomment">//!     use merkle_light::merkle::MerkleTree;</span>
+<span class="doccomment">//!     use std::iter::FromIterator;</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//!     let mut h1 = [0u8; 32];</span>
 <span class="doccomment">//!     let mut h2 = [0u8; 32];</span>
@@ -356,8 +381,9 @@
 <span class="doccomment">//!     h2[0] = 0x22;</span>
 <span class="doccomment">//!     h3[0] = 0x33;</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//!     let t = MerkleTree::from_iter(vec![h1, h2, h3], ExampleAlgorithm::new());</span>
+<span class="doccomment">//!     let t: MerkleTree&lt;[u8; 32], ExampleAlgorithm&gt; = MerkleTree::from_iter(vec![h1, h2, h3]);</span>
 <span class="doccomment">//!     println!(&quot;{:?}&quot;, t.root());</span>
+<span class="doccomment">//! }</span>
 <span class="doccomment">//! }</span>
 <span class="doccomment">//! ```</span>
 
@@ -382,6 +408,10 @@
 
 <span class="doccomment">/// Merkle tree abstractions, implementation and algorithms.</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">merkle</span>;
+
+<span class="doccomment">/// Tests data.</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">test_item</span>;
 
 <span class="doccomment">/// Tests XOR128.</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>

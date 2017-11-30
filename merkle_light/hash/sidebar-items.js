@@ -1,1 +1,1 @@
-initSidebarItems({"trait":[["Algorithm","Hashing algorithm type."],["Hashable","A hashable type."]]});
+initSidebarItems({"trait":[["Algorithm","A trait for hashing an arbitrary stream of bytes for calculating merkle tree nodes."],["Hashable","A hashable type."]]});

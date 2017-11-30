@@ -48,17 +48,18 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/merkle_light/lib.rs.html#1-175' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/merkle_light/lib.rs.html#1-190' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>light <em>Merkle Tree</em> implementation.</p>
 
 <p>Merkle tree (MT) implemented as a full binary tree allocated as a vec
 of statically sized hashes to give hashes more locality. MT specialized
-to the extent of hashing algorithm and hash item, compatible to the
-<code>std::hash::Hasher</code> and supports custom hash algorithms.
-Implementation does not depend on any external crypto libraries,
-and tries to be as performant, as possible.</p>
+to the extent of hashing algorithm and hash item. [<code>Hashable</code>] trait is
+compatible to the <code>std::hash::Hasher</code> and supports custom hash algorithms.
+Implementation does not depend on any external crypto libraries, and tries
+to be as performant as possible.</p>
 
 <p>This tree implementation uses encoding scheme as in <em>Certificate Transparency</em>
+by default. Encoding scheme for leafs and nodes can be overridden though.
 <a href="https://tools.ietf.org/html/rfc6962">RFC 6962</a>:</p>
 
 <pre><code class="language-text">MTH({d(0)}) = ALG(0x00 || d(0)).
@@ -71,10 +72,10 @@ MTH(D[n]) = ALG(0x01 || MTH(D[0:k]) || MTH(D[k:n])),
 <p>Link: <a href="https://en.wikipedia.org/wiki/Merkle_tree"></a></p>
 
 <h1 id='implementation-choices' class='section-header'><a href='#implementation-choices'>Implementation choices</a></h1>
-<p>Main idea was that the whole code must obtain specialization at compile
-time, hashes must be fixed size arrays known at compile time, hash algorithm
-must be interface (lib should not dep on crypto libs) and lib must somehow
-mimic std Rust api.</p>
+<p>Main idea is the whole code must obtain specialization at compile time with
+minimum allocations calls, hashes must be of fixed size arrays known at
+compile time, hash algorithm must be a trait and must not depend on any
+external cryptographic libraries and the lib itself must somehow mimic std Rust api.</p>
 
 <p>Standard way in Rust is to hash objects with a <code>std::hash::Hasher</code>, and mainly
 that is the reason behind the choice of the abstractions:</p>
@@ -94,6 +95,10 @@ into unusable. <code>ring</code> libra tho contains interfaces incompatible to
 <code>start-update-finish-reset</code> lifecycle. It requires either <code>cloning()</code> its state
 on finalization, or <code>Cell</code>-ing via unsafe.</p>
 
+<p>Turning back to having [<code>Algorithm.write(&amp;mut self, &amp;[u8])</code>] instead of
+<code>write(T)</code> allows to relax [<code>Algorithm</code>] trait [<code>Hasher</code>] constraint, even tho
+works together well still.</p>
+
 <h1 id='interface' class='section-header'><a href='#interface'>Interface</a></h1>
 <pre><code class="language-text">- build_tree (items) -&gt; tree
 - get_root -&gt; hash
@@ -111,24 +116,23 @@ on finalization, or <code>Cell</code>-ing via unsafe.</p>
 
 <h1 id='quick-start' class='section-header'><a href='#quick-start'>Quick start</a></h1>
 <pre class="rust rust-example-rendered">
-<span class="attribute">#![<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;chaincore&quot;</span>)]</span>
-
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;chaincore&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">crypto</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">merkle_light</span>;
 
-<span class="kw">fn</span> <span class="ident">main</span>() {
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;chaincore&quot;</span>)]</span>
+<span class="kw">mod</span> <span class="ident">example</span> {
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">hash</span>::<span class="ident">Hasher</span>;
-    <span class="kw">use</span> <span class="ident">merkle_light</span>::<span class="ident">hash</span>::{<span class="ident">Algorithm</span>, <span class="ident">Hashable</span>};
-    <span class="kw">use</span> <span class="ident">merkle_light</span>::<span class="ident">merkle</span>::<span class="ident">MerkleTree</span>;
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">FromIterator</span>;
     <span class="kw">use</span> <span class="ident">crypto</span>::<span class="ident">sha3</span>::{<span class="ident">Sha3</span>, <span class="ident">Sha3Mode</span>};
     <span class="kw">use</span> <span class="ident">crypto</span>::<span class="ident">digest</span>::<span class="ident">Digest</span>;
+    <span class="kw">use</span> <span class="ident">merkle_light</span>::<span class="ident">hash</span>::{<span class="ident">Algorithm</span>, <span class="ident">Hashable</span>};
 
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-    <span class="kw">struct</span> <span class="ident">ExampleAlgorithm</span>(<span class="ident">Sha3</span>);
+    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExampleAlgorithm</span>(<span class="ident">Sha3</span>);
 
     <span class="kw">impl</span> <span class="ident">ExampleAlgorithm</span> {
-        <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-&gt;</span> <span class="ident">ExampleAlgorithm</span> {
+        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-&gt;</span> <span class="ident">ExampleAlgorithm</span> {
             <span class="ident">ExampleAlgorithm</span>(<span class="ident">Sha3</span>::<span class="ident">new</span>(<span class="ident">Sha3Mode</span>::<span class="ident">Sha3_256</span>))
         }
     }
@@ -147,31 +151,37 @@ on finalization, or <code>Cell</code>-ing via unsafe.</p>
 
         <span class="attribute">#[<span class="ident">inline</span>]</span>
         <span class="kw">fn</span> <span class="ident">finish</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">u64</span> {
-            <span class="number">0</span>
+            <span class="macro">unimplemented</span><span class="macro">!</span>()
         }
     }
 
     <span class="kw">impl</span> <span class="ident">Hashable</span><span class="op">&lt;</span><span class="ident">ExampleAlgorithm</span><span class="op">&gt;</span> <span class="kw">for</span> [<span class="ident">u8</span>; <span class="number">32</span>] {
         <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ExampleAlgorithm</span>) {
-            <span class="ident">state</span>.<span class="ident">write</span>(<span class="self">self</span>.<span class="ident">as_ref</span>())
+            <span class="ident">Hasher</span>::<span class="ident">write</span>(<span class="ident">state</span>, <span class="self">self</span>.<span class="ident">as_ref</span>())
         }
     }
 
     <span class="kw">impl</span> <span class="ident">Algorithm</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ExampleAlgorithm</span> {
+        <span class="attribute">#[<span class="ident">inline</span>]</span>
         <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> [<span class="ident">u8</span>; <span class="number">32</span>] {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">h</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">32</span>];
             <span class="self">self</span>.<span class="number">0</span>.<span class="ident">result</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">h</span>);
             <span class="ident">h</span>
         }
 
+        <span class="attribute">#[<span class="ident">inline</span>]</span>
         <span class="kw">fn</span> <span class="ident">reset</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
             <span class="self">self</span>.<span class="number">0</span>.<span class="ident">reset</span>();
         }
-
-        <span class="kw">fn</span> <span class="ident">write_t</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">i</span>: [<span class="ident">u8</span>; <span class="number">32</span>]) {
-            <span class="self">self</span>.<span class="number">0</span>.<span class="ident">input</span>(<span class="ident">i</span>.<span class="ident">as_ref</span>());
-        }
     }
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;chaincore&quot;</span>)]</span>
+{
+    <span class="kw">use</span> <span class="ident">example</span>::<span class="ident">ExampleAlgorithm</span>;
+    <span class="kw">use</span> <span class="ident">merkle_light</span>::<span class="ident">merkle</span>::<span class="ident">MerkleTree</span>;
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">FromIterator</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">h1</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">32</span>];
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">h2</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">32</span>];
@@ -180,8 +190,9 @@ on finalization, or <code>Cell</code>-ing via unsafe.</p>
     <span class="ident">h2</span>[<span class="number">0</span>] <span class="op">=</span> <span class="number">0x22</span>;
     <span class="ident">h3</span>[<span class="number">0</span>] <span class="op">=</span> <span class="number">0x33</span>;
 
-    <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">MerkleTree</span>::<span class="ident">from_iter</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">h1</span>, <span class="ident">h2</span>, <span class="ident">h3</span>], <span class="ident">ExampleAlgorithm</span>::<span class="ident">new</span>());
+    <span class="kw">let</span> <span class="ident">t</span>: <span class="ident">MerkleTree</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="number">32</span>], <span class="ident">ExampleAlgorithm</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MerkleTree</span>::<span class="ident">from_iter</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">h1</span>, <span class="ident">h2</span>, <span class="ident">h3</span>]);
     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">t</span>.<span class="ident">root</span>());
+}
 }</pre>
 </div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
