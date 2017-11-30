@@ -11,12 +11,68 @@ extern crate merkle_light;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-use merkle_light::hash::{Algorithm, Hashable};
+use merkle_light::hash::Algorithm;
 use merkle_light::merkle::MerkleTree;
-use std::mem;
-use std::ptr;
 use std::hash::Hasher;
+use std::cmp::Ordering;
 use test::Bencher;
+
+#[derive(Copy, Clone)]
+pub struct Hash512(pub [u8; 64]);
+
+impl Default for Hash512 {
+    fn default() -> Self {
+        Hash512([0u8; 64])
+    }
+}
+
+impl AsRef<[u8]> for Hash512 {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
+impl PartialOrd for Hash512 {
+    #[inline]
+    fn partial_cmp(&self, other: &Hash512) -> Option<Ordering> {
+        PartialOrd::partial_cmp(&&self.0[..], &&other.0[..])
+    }
+
+    #[inline]
+    fn lt(&self, other: &Hash512) -> bool {
+        PartialOrd::lt(&&self.0[..], &&other.0[..])
+    }
+
+    #[inline]
+    fn le(&self, other: &Hash512) -> bool {
+        PartialOrd::le(&&self.0[..], &&other.0[..])
+    }
+
+    #[inline]
+    fn ge(&self, other: &Hash512) -> bool {
+        PartialOrd::ge(&&self.0[..], &&other.0[..])
+    }
+
+    #[inline]
+    fn gt(&self, other: &Hash512) -> bool {
+        PartialOrd::gt(&&self.0[..], &&other.0[..])
+    }
+}
+
+impl Ord for Hash512 {
+    #[inline]
+    fn cmp(&self, other: &Hash512) -> Ordering {
+        Ord::cmp(&&self.0[..], &&other.0[..])
+    }
+}
+
+impl PartialEq for Hash512 {
+    fn eq(&self, other: &Hash512) -> bool {
+        self.0.as_ref() == other.0.as_ref()
+    }
+}
+
+impl Eq for Hash512 {}
 
 #[derive(Copy, Clone)]
 struct A(Sha512);
@@ -41,17 +97,7 @@ impl Hasher for A {
 
     #[inline]
     fn finish(&self) -> u64 {
-        0
-    }
-}
-
-type Hash512 = [u64; 8];
-
-impl Hashable<A> for Hash512 {
-    fn hash(&self, state: &mut A) {
-        for x in self {
-            state.write_u64(*x)
-        }
+        unimplemented!()
     }
 }
 
@@ -60,36 +106,12 @@ impl Algorithm<Hash512> for A {
     fn hash(&mut self) -> Hash512 {
         let mut h = [0u8; 64];
         self.0.result(&mut h);
-        let mut r = [0u64; 8];
-        read_u64v_be(&mut r, h.as_ref());
-        r
+        Hash512(h)
     }
 
     #[inline]
     fn reset(&mut self) {
         self.0.reset();
-    }
-
-    #[inline]
-    fn write_t(&mut self, i: Hash512) {
-        for x in i.as_ref() {
-            self.write_u64(*x)
-        }
-    }
-}
-
-fn read_u64v_be(dst: &mut [u64], input: &[u8]) {
-    assert_eq!(dst.len() * 8, input.len());
-    unsafe {
-        let mut x: *mut u64 = dst.get_unchecked_mut(0);
-        let mut y: *const u8 = input.get_unchecked(0);
-        for _ in 0..dst.len() {
-            let mut tmp: u64 = mem::uninitialized();
-            ptr::copy_nonoverlapping(y, &mut tmp as *mut _ as *mut u8, 8);
-            *x = u64::from_be(tmp);
-            x = x.offset(1);
-            y = y.offset(8);
-        }
     }
 }
 
