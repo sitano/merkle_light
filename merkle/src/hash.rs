@@ -107,14 +107,10 @@ const INTERIOR: u8 = 0x01;
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
-pub trait Algorithm<T>: Default
+pub trait Algorithm<T>: Hasher + Default
 where
     T: Clone + AsRef<[u8]>,
 {
-    /// Writes some data into hashing state.
-    #[inline]
-    fn write(&mut self, bytes: &[u8]);
-
     /// Returns the hash value for the data stream written so far.
     #[inline]
     fn hash(&mut self) -> T;

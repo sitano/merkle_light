@@ -82,11 +82,6 @@ impl Hashable<ExampleAlgorithm> for [u8; 32] {
 
 impl Algorithm<[u8; 32]> for ExampleAlgorithm {
     #[inline]
-    fn write(&mut self, data: &[u8]) {
-        self.0.input(data);
-    }
-
-    #[inline]
     fn hash(&mut self) -> [u8; 32] {
         let mut h = [0u8; 32];
         self.0.result(&mut h);

@@ -31,11 +31,6 @@ impl Hasher for CMH {
 
 impl Algorithm<Item> for CMH {
     #[inline]
-    fn write(&mut self, msg: &[u8]) {
-        <Hasher>::write(&mut self.0, msg)
-    }
-
-    #[inline]
     fn hash(&mut self) -> Item {
         Item(self.finish())
     }
@@ -53,10 +48,10 @@ impl Algorithm<Item> for CMH {
     #[inline]
     fn node(&mut self, left: Item, right: Item) -> Item {
         self.reset();
-        <Self as Algorithm<_>>::write(self, &[1u8]);
-        <Self as Algorithm<_>>::write(self, left.as_ref());
-        <Self as Algorithm<_>>::write(self, &[2u8]);
-        <Self as Algorithm<_>>::write(self, right.as_ref());
+        self.write(&[1u8]);
+        self.write(left.as_ref());
+        self.write(&[2u8]);
+        self.write(right.as_ref());
         Item(self.hash().0 & 0xffff)
     }
 }
