@@ -13,10 +13,11 @@ extern crate merkle_light;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-use merkle_light::hash::Algorithm;
+use merkle_light::hash::{Algorithm, Hashable};
 use merkle_light::merkle::MerkleTree;
 use hash512::Hash512;
 use std::hash::Hasher;
+use std::iter::FromIterator;
 use test::Bencher;
 
 #[derive(Copy, Clone)]
@@ -60,6 +61,14 @@ impl Algorithm<Hash512> for A {
     }
 }
 
+fn small_tree() -> Vec<Hash512> {
+    ["one", "two", "three", "four"].iter().map(|x| {
+        let mut a = A::new();
+        Hashable::hash(x, &mut a);
+        a.hash()
+    }).collect::<Vec<Hash512>>()
+}
+
 #[bench]
 fn bench_crypto_sha512(b: &mut Bencher) {
     let mut h = [0u8; 64];
@@ -72,15 +81,14 @@ fn bench_crypto_sha512(b: &mut Bencher) {
 
 #[bench]
 fn bench_crypto_sha512_from_data_5(b: &mut Bencher) {
-    let values = vec!["one", "two", "three", "four"];
-
-    b.iter(|| MerkleTree::<Hash512, A>::from_data(values.clone()));
+    let values = small_tree();
+    b.iter(|| MerkleTree::<Hash512, A>::from_iter(values.clone()));
 }
 
 #[bench]
 fn bench_crypto_sha512_from_data_5_proof(b: &mut Bencher) {
-    let values = vec!["one", "two", "three", "four"];
-    let tree: MerkleTree<Hash512, A> = MerkleTree::from_data(values.clone());
+    let values = small_tree();
+    let tree: MerkleTree<Hash512, A> = MerkleTree::from_iter(values.clone());
 
     b.iter(|| for i in 0..values.len() {
         let proof = tree.gen_proof(i);
@@ -90,8 +98,8 @@ fn bench_crypto_sha512_from_data_5_proof(b: &mut Bencher) {
 
 #[bench]
 fn bench_crypto_sha512_from_data_5_proof_check(b: &mut Bencher) {
-    let values = vec!["one", "two", "three", "four"];
-    let tree: MerkleTree<Hash512, A> = MerkleTree::from_data(values.clone());
+    let values = small_tree();
+    let tree: MerkleTree<Hash512, A> = MerkleTree::from_iter(values.clone());
     let proofs = (0..values.len())
         .map(|i| tree.gen_proof(i))
         .collect::<Vec<_>>();
