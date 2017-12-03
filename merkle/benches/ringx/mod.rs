@@ -487,6 +487,7 @@ pub mod test_util {
 
     pub static ALL_ALGORITHMS: [&'static Algorithm; 3] = [&SHA256, &SHA512, &SHA512_256];
 }
+
 /*
 #[cfg(test)]
 mod tests {
