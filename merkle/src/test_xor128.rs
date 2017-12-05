@@ -1,5 +1,5 @@
 #![cfg(test)]
-
+/*
 use hash::*;
 use merkle::MerkleTree;
 use merkle::next_pow2;
@@ -211,4 +211,4 @@ fn test_simple_tree() {
             assert!(p.validate::<XOR128>());
         }
     }
-}
+}*/

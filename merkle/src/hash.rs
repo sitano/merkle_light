@@ -120,21 +120,26 @@ where
     fn reset(&mut self) {
         *self = Self::default();
     }
+}
 
+/// Merkle tree interior nodes hashing algorithm adapter.
+pub trait MTA<T: Clone+AsRef<[u8]>, A: Algorithm<T>> {
     /// Returns the hash value for MT leaf (prefix 0x00).
-    fn leaf(&mut self, leaf: T) -> T {
-        self.reset();
-        self.write(&[LEAF]);
-        self.write(leaf.as_ref());
-        self.hash()
+    #[inline(always)]
+    fn leaf<O: Hashable<A>>(leaf: O) -> T {
+        let mut a = A::default();
+        a.write_u8(LEAF);
+        leaf.hash(&mut a);
+        a.hash()
     }
 
     /// Returns the hash value for MT interior node (prefix 0x01).
-    fn node(&mut self, left: T, right: T) -> T {
-        self.reset();
-        self.write(&[INTERIOR]);
-        self.write(left.as_ref());
-        self.write(right.as_ref());
-        self.hash()
+    #[inline(always)]
+    fn node(left: T, right: T) -> T {
+        let mut a = A::default();
+        a.write_u8(INTERIOR);
+        a.write(left.as_ref());
+        a.write(right.as_ref());
+        a.hash()
     }
 }

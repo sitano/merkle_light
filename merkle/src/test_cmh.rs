@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use hash::{Hashable, Algorithm};
+use hash::{Hashable, Algorithm, MTA};
 use merkle::MerkleTree;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
@@ -39,27 +39,35 @@ impl Algorithm<Item> for CMH {
     fn reset(&mut self) {
         *self = CMH::default()
     }
+}
 
-    #[inline]
-    fn leaf(&mut self, leaf: Item) -> Item {
-        Item(leaf.0 & 0xff)
+trait CMHMTA {}
+
+impl MTA<Item, CMH> for CMHMTA {
+    /// Returns the hash value for MT leaf (prefix 0x00).
+    #[inline(always)]
+    fn leaf<O: Hashable<CMH>>(leaf: O) -> Item {
+        let mut a = CMH::default();
+        leaf.hash(&mut a);
+        Item(a.hash().0 & 0xff)
     }
 
-    #[inline]
-    fn node(&mut self, left: Item, right: Item) -> Item {
-        self.reset();
-        self.write(&[1u8]);
-        self.write(left.as_ref());
-        self.write(&[2u8]);
-        self.write(right.as_ref());
-        Item(self.hash().0 & 0xffff)
+    /// Returns the hash value for MT interior node (prefix 0x01).
+    #[inline(always)]
+    fn node(left: Item, right: Item) -> Item {
+        let mut a = CMH::default();
+        a.write_u8(1u8);
+        a.write(left.as_ref());
+        a.write_u8(2u8);
+        a.write(right.as_ref());
+        Item(a.hash().0 & 0xffff)
     }
 }
 
 #[test]
 fn test_custom_merkle_hasher() {
     let mut a = CMH::new();
-    let mt: MerkleTree<Item, CMH> = MerkleTree::from_iter([1, 2, 3, 4, 5].iter().map(|x| {
+    let mt: MerkleTree<Item, CMH, CMHMTA> = MerkleTree::from_iter([1, 2, 3, 4, 5].iter().map(|x| {
         a.reset();
         x.hash(&mut a);
         a.hash()

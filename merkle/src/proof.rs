@@ -35,23 +35,6 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
 
     /// Verifies MT inclusion proof
     pub fn validate<A: Algorithm<T>>(&self) -> bool {
-        let size = self.lemma.len();
-        if size < 2 {
-            return false;
-        }
-
-        let mut h = self.item();
-        let mut a = A::default();
-
-        for i in 1..size - 1 {
-            a.reset();
-            h = if self.path[i - 1] {
-                a.node(h, self.lemma[i].clone())
-            } else {
-                a.node(self.lemma[i].clone(), h)
-            };
-        }
-
-        h == self.root()
+        unimplemented!()
     }
 }
