@@ -107,7 +107,11 @@ const INTERIOR: u8 = 0x01;
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
-pub trait Algorithm<T>: Hasher + Default
+///
+/// [`Algorithm`] leads the [`Hasher`] contract to break at `finish()` site,
+/// but that is intended. This trait extends [`Hasher`] with `hash -> T` and
+/// `reset` state methods.
+pub trait Algorithm<T>: MTA<T> + Hasher + Default
 where
     T: Clone + AsRef<[u8]>,
 {
@@ -120,21 +124,23 @@ where
     fn reset(&mut self) {
         *self = Self::default();
     }
+}
 
+/// Merkle tree interior nodes hashing algorithm adapter.
+pub trait MTA<T: Clone+AsRef<[u8]>>: Hasher {
     /// Returns the hash value for MT leaf (prefix 0x00).
-    fn leaf(&mut self, leaf: T) -> T {
-        self.reset();
-        self.write(&[LEAF]);
-        self.write(leaf.as_ref());
-        self.hash()
+    #[inline(always)]
+    fn leaf<O: Hashable<Self>>(&mut self, leaf: O) where Self: Algorithm<T> {
+        self.write_u8(LEAF);
+        leaf.hash(self);
     }
 
     /// Returns the hash value for MT interior node (prefix 0x01).
-    fn node(&mut self, left: T, right: T) -> T {
-        self.reset();
-        self.write(&[INTERIOR]);
+    #[inline(always)]
+    fn node(&mut self, left: T, right: T) {
+        self.write_u8(INTERIOR);
         self.write(left.as_ref());
         self.write(right.as_ref());
-        self.hash()
     }
 }
+

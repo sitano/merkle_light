@@ -3,6 +3,7 @@
 
 use std::slice;
 use std::mem;
+use hash::{Hashable, Algorithm};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Debug)]
 pub struct Item(pub u64);
@@ -30,3 +31,10 @@ impl Into<u64> for Item {
         self.0
     }
 }
+
+impl<A: Algorithm<Item>> Hashable<A> for Item {
+    fn hash(&self, state: &mut A) {
+        state.write_u64(self.0)
+    }
+}
+

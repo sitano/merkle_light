@@ -45,11 +45,12 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
 
         for i in 1..size - 1 {
             a.reset();
-            h = if self.path[i - 1] {
+            if self.path[i - 1] {
                 a.node(h, self.lemma[i].clone())
             } else {
                 a.node(self.lemma[i].clone(), h)
-            };
+            }
+            h = a.hash()
         }
 
         h == self.root()

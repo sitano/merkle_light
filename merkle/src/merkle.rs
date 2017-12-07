@@ -1,7 +1,7 @@
 use hash::{Hashable, Algorithm};
 use proof::Proof;
 use std::iter::FromIterator;
-use std::hash::Hasher;
+use std::marker::PhantomData;
 use std::ops;
 
 /// Merkle Tree.
@@ -40,31 +40,17 @@ pub struct MerkleTree<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>> {
     data: Vec<T>,
     leafs: usize,
     height: usize,
-    a: A,
+    _a: PhantomData<A>,
 }
 
-impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T> + Hasher + Default> MerkleTree<T, A> {
-    /// Creates new merkle from a sequence of hashes.
-    pub fn new<I: IntoIterator<Item = T>>(data: I) -> MerkleTree<T, A> {
-        Self::from_hash(data)
-    }
-
-    /// Creates new merkle from a sequence of hashes.
-    pub fn from_hash<I: IntoIterator<Item = T>>(data: I) -> MerkleTree<T, A> {
+impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>> MerkleTree<T, A> {
+    /// Creates new merkle tree from a list of hashable objects.
+    pub fn new<D: Hashable<A>, I: IntoIterator<Item = D>>(data: I) -> MerkleTree<T, A> {
         Self::from_iter(data)
     }
 
-    /// Creates new merkle tree from a list of hashable objects.
-    pub fn from_data<O: Hashable<A>, I: IntoIterator<Item = O>>(data: I) -> MerkleTree<T, A> {
-        let mut a = A::default();
-        Self::from_iter(data.into_iter().map(|x| {
-            a.reset();
-            x.hash(&mut a);
-            a.hash()
-        }))
-    }
-
     fn build(&mut self) {
+        let mut a = A::default();
         let mut width = self.leafs;
 
         // build tree
@@ -81,8 +67,9 @@ impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T> + Hasher + Default> MerkleTre
 
             // next shift
             while i < j {
-                let h = self.a.node(self.data[i].clone(), self.data[i + 1].clone());
-                self.data.push(h);
+                a.reset();
+                a.node(self.data[i].clone(), self.data[i + 1].clone());
+                self.data.push(a.hash());
                 i += 2;
             }
 
@@ -164,10 +151,10 @@ impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T> + Hasher + Default> MerkleTre
     }
 }
 
-impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T> + Hasher + Default> FromIterator<T>
+impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>, D: Hashable<A>> FromIterator<D>
     for MerkleTree<T, A> {
     /// Creates new merkle tree from an iterator over hashable objects.
-    fn from_iter<I: IntoIterator<Item = T>>(into: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = D>>(into: I) -> Self {
         let iter = into.into_iter();
         let mut data: Vec<T> = match iter.size_hint().1 {
             Some(e) => {
@@ -181,7 +168,9 @@ impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T> + Hasher + Default> FromItera
         // leafs
         let mut a = A::default();
         for item in iter {
-            data.push(a.leaf(item));
+            a.reset();
+            a.leaf(item);
+            data.push(a.hash());
         }
 
         let leafs = data.len();
@@ -194,7 +183,7 @@ impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T> + Hasher + Default> FromItera
             data,
             leafs,
             height: log2_pow2(size + 1),
-            a,
+            _a: PhantomData,
         };
 
         mt.build();
@@ -202,7 +191,7 @@ impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T> + Hasher + Default> FromItera
     }
 }
 
-impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T> + Hasher + Default> ops::Deref
+impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>> ops::Deref
     for MerkleTree<T, A> {
     type Target = [T];
 

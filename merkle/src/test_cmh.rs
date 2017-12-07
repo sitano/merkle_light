@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use hash::{Hashable, Algorithm};
+use hash::{Hashable, Algorithm,MTA};
 use merkle::MerkleTree;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
@@ -18,41 +18,39 @@ impl CMH {
 }
 
 impl Hasher for CMH {
-    #[inline]
     fn write(&mut self, msg: &[u8]) {
         <Hasher>::write(&mut self.0, msg)
     }
 
-    #[inline]
     fn finish(&self) -> u64 {
         self.0.finish()
     }
 }
 
 impl Algorithm<Item> for CMH {
-    #[inline]
     fn hash(&mut self) -> Item {
         Item(self.finish())
     }
 
-    #[inline]
     fn reset(&mut self) {
         *self = CMH::default()
     }
+}
 
-    #[inline]
-    fn leaf(&mut self, leaf: Item) -> Item {
-        Item(leaf.0 & 0xff)
+impl MTA<Item> for CMH {
+    fn leaf<O: Hashable<Self>>(&mut self, leaf: O) where Self: Algorithm<Item> {
+        unimplemented!()
+        // Item(leaf.0 & 0xff)
     }
 
-    #[inline]
-    fn node(&mut self, left: Item, right: Item) -> Item {
-        self.reset();
+    fn node(&mut self, left: Item, right: Item) {
+        unimplemented!()
+        /*(self.reset();
         self.write(&[1u8]);
         self.write(left.as_ref());
         self.write(&[2u8]);
         self.write(right.as_ref());
-        Item(self.hash().0 & 0xffff)
+        Item(self.hash().0 & 0xffff)*/
     }
 }
 
