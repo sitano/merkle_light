@@ -52,8 +52,6 @@ impl Algorithm<Item> for XOR128 {
     }
 }
 
-impl MTA<Item> for XOR128 {}
-
 impl fmt::UpperHex for XOR128 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if f.alternate() {
@@ -86,7 +84,7 @@ fn test_hasher_light() {
 #[test]
 fn test_from_slice() {
     let x = [String::from("ars"), String::from("zxc")];
-    let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::from_data(&x);
+    let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::new(&x);
     assert_eq!(
         mt.as_slice(),
         [
@@ -107,7 +105,7 @@ fn test_from_slice() {
 #[test]
 fn test_from_iter() {
     let mut a = XOR128::new();
-    let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::from_iter(["a", "b", "c"].iter().map(|x| {
+    let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::new(["a", "b", "c"].iter().map(|x| {
         a.reset();
         x.hash(&mut a);
         a.hash()

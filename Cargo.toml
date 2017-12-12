@@ -4,3 +4,4 @@ members = [
     "merkle",
     "merkle_derive"
 ]
+

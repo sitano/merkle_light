@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use hash::{Hashable, Algorithm, MTA};
+use hash::{Hashable, Algorithm};
 use merkle::MerkleTree;
 use merkle::next_pow2;
 use merkle::log2_pow2;
@@ -20,8 +20,6 @@ impl Algorithm<Item> for DefaultHasher {
         *self = DefaultHasher::default()
     }
 }
-
-impl MTA<Item> for DefaultHasher {}
 
 #[test]
 fn test_simple_tree() {

@@ -51,7 +51,6 @@ impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
     ///
     /// or better change signature in `ring` library of `finish()` to
     /// be `finish(&mut self)` to mark state as finalized or reset it.
-    #[inline]
     fn hash(&mut self) -> RingSHA256Hash {
         let h1 = self.0.clone().finish();
 
@@ -64,29 +63,17 @@ impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
         h
     }
 
-    #[inline]
     fn reset(&mut self) {
         self.0 = Context::new(&SHA256);
     }
 
-    fn leaf(&mut self, leaf: RingSHA256Hash) -> RingSHA256Hash {
-        leaf
+    fn leaf<O: Hashable<Self>>(&mut self, leaf: O) {
+        leaf.hash(self)
     }
 
-    fn node(&mut self, left: RingSHA256Hash, right: RingSHA256Hash) -> RingSHA256Hash {
-        // concat
-        let mut c = Context::new(&SHA256);
-        c.update(left.as_ref());
-        c.update(right.as_ref());
-        let h1 = c.finish();
-
-        // double sha256
-        c = Context::new(&SHA256);
-        c.update(h1.as_ref());
-
-        let mut h = [0u8; 32];
-        h.copy_from_slice(c.finish().as_ref());
-        h
+    fn node(&mut self, left: RingSHA256Hash, right: RingSHA256Hash) {
+        left.hash(self);
+        right.hash(self);
     }
 }
 

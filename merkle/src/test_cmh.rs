@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use hash::{Hashable, Algorithm,MTA};
+use hash::{Hashable, Algorithm};
 use merkle::MerkleTree;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
@@ -9,11 +9,11 @@ use test_item::Item;
 
 /// Custom merkle hash util test
 #[derive(Debug, Clone, Default)]
-struct CMH(DefaultHasher);
+struct CMH(DefaultHasher, u8);
 
 impl CMH {
     pub fn new() -> CMH {
-        CMH(DefaultHasher::new())
+        CMH(DefaultHasher::new(), 0)
     }
 }
 
@@ -29,28 +29,26 @@ impl Hasher for CMH {
 
 impl Algorithm<Item> for CMH {
     fn hash(&mut self) -> Item {
-        Item(self.finish())
+        Item(self.finish() & (if self.1 <= 1 { 0xff } else { 0xffff }))
     }
 
     fn reset(&mut self) {
         *self = CMH::default()
     }
-}
 
-impl MTA<Item> for CMH {
-    fn leaf<O: Hashable<Self>>(&mut self, leaf: O) where Self: Algorithm<Item> {
-        unimplemented!()
-        // Item(leaf.0 & 0xff)
+    fn leaf<O: Hashable<Self>>(&mut self, leaf: O) {
+        self.1 += 1;
+        // e.g. no prefix
+        leaf.hash(self)
     }
 
     fn node(&mut self, left: Item, right: Item) {
-        unimplemented!()
-        /*(self.reset();
+        self.1 += 2;
+        // e.g. custom prefix
         self.write(&[1u8]);
         self.write(left.as_ref());
         self.write(&[2u8]);
         self.write(right.as_ref());
-        Item(self.hash().0 & 0xffff)*/
     }
 }
 
