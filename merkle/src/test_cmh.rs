@@ -39,7 +39,7 @@ impl Algorithm<Item> for CMH {
     fn leaf<O: Hashable<Self>>(&mut self, leaf: O) {
         self.1 += 1;
         // e.g. no prefix
-        leaf.hash(self)
+        leaf.hash(self);
     }
 
     fn node(&mut self, left: Item, right: Item) {

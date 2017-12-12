@@ -6,7 +6,6 @@ extern crate merkle_light;
 
 use std::fmt;
 use std::hash::Hasher;
-use std::iter::FromIterator;
 use merkle_light::hash::{Algorithm, Hashable};
 use merkle_light::merkle::MerkleTree;
 use crypto::sha2::Sha256;
@@ -59,15 +58,19 @@ impl Algorithm<CryptoSHA256Hash> for CryptoBitcoinAlgorithm {
         self.0.reset();
     }
 
-    fn leaf(&mut self, leaf: CryptoSHA256Hash) -> CryptoSHA256Hash {
-        leaf
+    fn leaf<O: Hashable<Self>>(&mut self, leaf: O) {
+        leaf.hash(self)
     }
 
-    fn node(&mut self, left: CryptoSHA256Hash, right: CryptoSHA256Hash) -> CryptoSHA256Hash {
-        self.reset();
-        self.write(left.as_ref());
-        self.write(right.as_ref());
-        self.hash()
+    fn node(&mut self, left: CryptoSHA256Hash, right: CryptoSHA256Hash) {
+        left.hash(self);
+        right.hash(self);
+    }
+}
+
+impl Hashable<CryptoBitcoinAlgorithm> for Vec<u8> {
+    fn hash(&self, state: &mut CryptoBitcoinAlgorithm) {
+        state.write(self.as_ref())
     }
 }
 
@@ -120,9 +123,21 @@ fn test_crypto_bitcoin_node() {
     let h11 = h1;
     let h12 = h2;
     let h13 = h3;
-    let h21 = a.node(h11, h12);
-    let h22 = a.node(h13, h13);
-    let h31 = a.node(h21, h22);
+    let h21 = {
+        a.reset();
+        a.node(h11, h12);
+        a.hash()
+    };
+    let h22 = {
+        a.reset();
+        a.node(h13, h13);
+        a.hash()
+    };
+    let h31 = {
+        a.reset();
+        a.node(h21, h22);
+        a.hash()
+    };
 
     assert_eq!(
         format!("{}", HexSlice::new(h21.as_ref())),
@@ -138,7 +153,7 @@ fn test_crypto_bitcoin_node() {
     );
 
     let t: MerkleTree<CryptoSHA256Hash, CryptoBitcoinAlgorithm> =
-        MerkleTree::from_iter(vec![h1, h2, h3]);
+        MerkleTree::new([[h11, h12].concat(), [h13, h13].concat()].iter());
     assert_eq!(
         format!("{}", HexSlice::new(t.root().as_ref())),
         "d47780c084bad3830bcdaf6eace035e4c6cbf646d103795d22104fb105014ba3"

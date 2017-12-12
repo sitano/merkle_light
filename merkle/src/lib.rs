@@ -110,12 +110,6 @@
 //!         }
 //!     }
 //!
-//!     impl Hashable<ExampleAlgorithm> for [u8; 32] {
-//!         fn hash(&self, state: &mut ExampleAlgorithm) {
-//!             Hasher::write(state, self.as_ref())
-//!         }
-//!     }
-//!
 //!     impl Algorithm<[u8; 32]> for ExampleAlgorithm {
 //!         #[inline]
 //!         fn hash(&mut self) -> [u8; 32] {

@@ -37,4 +37,3 @@ impl<A: Algorithm<Item>> Hashable<A> for Item {
         state.write_u64(self.0)
     }
 }
-

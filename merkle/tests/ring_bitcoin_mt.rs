@@ -9,7 +9,6 @@ use merkle_light::merkle::MerkleTree;
 use ring::digest::{Context, SHA256};
 use std::fmt;
 use std::hash::Hasher;
-use std::iter::FromIterator;
 
 #[derive(Clone)]
 struct RingBitcoinAlgorithm(Context);
@@ -77,6 +76,12 @@ impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
     }
 }
 
+impl Hashable<RingBitcoinAlgorithm> for Vec<u8> {
+    fn hash(&self, state: &mut RingBitcoinAlgorithm) {
+        state.write(self.as_ref())
+    }
+}
+
 struct HexSlice<'a>(&'a [u8]);
 
 impl<'a> HexSlice<'a> {
@@ -126,9 +131,21 @@ fn test_ring_bitcoin_node() {
     let h11 = h1;
     let h12 = h2;
     let h13 = h3;
-    let h21 = a.node(h11, h12);
-    let h22 = a.node(h13, h13);
-    let h31 = a.node(h21, h22);
+    let h21 = {
+        a.reset();
+        a.node(h11, h12);
+        a.hash()
+    };
+    let h22 = {
+        a.reset();
+        a.node(h13, h13);
+        a.hash()
+    };
+    let h31 = {
+        a.reset();
+        a.node(h21, h22);
+        a.hash()
+    };
 
     assert_eq!(
         format!("{}", HexSlice::new(h21.as_ref())),
@@ -144,7 +161,7 @@ fn test_ring_bitcoin_node() {
     );
 
     let t: MerkleTree<RingSHA256Hash, RingBitcoinAlgorithm> =
-        MerkleTree::from_iter(vec![h1, h2, h3]);
+        MerkleTree::new([[h11, h12].concat(), [h13, h13].concat()].iter());
     assert_eq!(
         format!("{}", HexSlice::new(t.root().as_ref())),
         "d47780c084bad3830bcdaf6eace035e4c6cbf646d103795d22104fb105014ba3"

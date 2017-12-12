@@ -191,8 +191,7 @@ impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>, D: Hashable<A>> FromIterator
     }
 }
 
-impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>> ops::Deref
-    for MerkleTree<T, A> {
+impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>> ops::Deref for MerkleTree<T, A> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
