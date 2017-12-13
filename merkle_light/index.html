@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/merkle_light/lib.rs.html#1-190' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/merkle_light/lib.rs.html#1-184' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>light <em>Merkle Tree</em> implementation.</p>
 
 <p>Merkle tree (MT) implemented as a full binary tree allocated as a vec
@@ -152,12 +152,6 @@ works together well still.</p>
         <span class="attribute">#[<span class="ident">inline</span>]</span>
         <span class="kw">fn</span> <span class="ident">finish</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">u64</span> {
             <span class="macro">unimplemented</span><span class="macro">!</span>()
-        }
-    }
-
-    <span class="kw">impl</span> <span class="ident">Hashable</span><span class="op">&lt;</span><span class="ident">ExampleAlgorithm</span><span class="op">&gt;</span> <span class="kw">for</span> [<span class="ident">u8</span>; <span class="number">32</span>] {
-        <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ExampleAlgorithm</span>) {
-            <span class="ident">Hasher</span>::<span class="ident">write</span>(<span class="ident">state</span>, <span class="self">self</span>.<span class="ident">as_ref</span>())
         }
     }
 

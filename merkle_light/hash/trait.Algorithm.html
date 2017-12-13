@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../../src/merkle_light/hash.rs.html#110-140' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../../src/merkle_light/hash.rs.html#114-144' title='goto source code'>[src]</a></span></h1>
 <pre class='rust trait'>pub trait Algorithm&lt;T&gt;: <a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html" title="trait core::hash::Hasher">Hasher</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/default/trait.Default.html" title="trait core::default::Default">Default</a> <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;,&nbsp;</span>{
     fn <a href='#tymethod.hash' class='fnname'>hash</a>(&amp;mut self) -&gt; T;
 
@@ -61,6 +61,10 @@ nodes.</p>
 <p>T is a hash item must be of known size at compile time, globally ordered, with
 default value as a neutral element of the hash space. Neutral element is
 interpreted as 0 or nil and required for evaluation of merkle tree.</p>
+
+<p>[<code>Algorithm</code>] breaks the [<code>Hasher</code>] contract at <code>finish()</code>, but that is intended.
+This trait extends [<code>Hasher</code>] with <code>hash -&gt; T</code> and <code>reset</code> state methods,
+plus implements default behavior of evaluation of MT interior nodes.</p>
 </div>
             <h2 id='required-methods' class='small-section-header'>
               Required Methods<a href='#required-methods' class='anchor'></a>
@@ -73,8 +77,8 @@ interpreted as 0 or nil and required for evaluation of merkle tree.</p>
             </h2>
             <div class='methods'>
         <h3 id='method.reset' class='method'><span id='reset.v' class='invisible'><code>fn <a href='#method.reset' class='fnname'>reset</a>(&amp;mut self)</code></span></h3><div class='docblock'><p>Reset Hasher state.</p>
-</div><h3 id='method.leaf' class='method'><span id='leaf.v' class='invisible'><code>fn <a href='#method.leaf' class='fnname'>leaf</a>(&amp;mut self, leaf: T) -&gt; T</code></span></h3><div class='docblock'><p>Returns the hash value for MT leaf (prefix 0x00).</p>
-</div><h3 id='method.node' class='method'><span id='node.v' class='invisible'><code>fn <a href='#method.node' class='fnname'>node</a>(&amp;mut self, left: T, right: T) -&gt; T</code></span></h3><div class='docblock'><p>Returns the hash value for MT interior node (prefix 0x01).</p>
+</div><h3 id='method.leaf' class='method'><span id='leaf.v' class='invisible'><code>fn <a href='#method.leaf' class='fnname'>leaf</a>(&amp;mut self, leaf: T) -&gt; T</code></span></h3><div class='docblock'><p>Returns hash value for MT leaf (prefix 0x00).</p>
+</div><h3 id='method.node' class='method'><span id='node.v' class='invisible'><code>fn <a href='#method.node' class='fnname'>node</a>(&amp;mut self, left: T, right: T) -&gt; T</code></span></h3><div class='docblock'><p>Returns hash value for MT interior node (prefix 0x01).</p>
 </div></div>
         <h2 id='implementors' class='small-section-header'>
           Implementors<a href='#implementors' class='anchor'></a>
