@@ -74,19 +74,9 @@ impl Algorithm<RingSHA256Hash> for RingBitcoinAlgorithm {
     }
 
     fn node(&mut self, left: RingSHA256Hash, right: RingSHA256Hash) -> RingSHA256Hash {
-        // concat
-        let mut c = Context::new(&SHA256);
-        c.update(left.as_ref());
-        c.update(right.as_ref());
-        let h1 = c.finish();
-
-        // double sha256
-        c = Context::new(&SHA256);
-        c.update(h1.as_ref());
-
-        let mut h = [0u8; 32];
-        h.copy_from_slice(c.finish().as_ref());
-        h
+        left.hash(self);
+        right.hash(self);
+        self.hash()
     }
 }
 
@@ -140,8 +130,11 @@ fn test_ring_bitcoin_node() {
     let h12 = h2;
     let h13 = h3;
     let h21 = a.node(h11, h12);
+    a.reset();
     let h22 = a.node(h13, h13);
+    a.reset();
     let h31 = a.node(h21, h22);
+    a.reset();
 
     assert_eq!(
         format!("{}", HexSlice::new(h21.as_ref())),
