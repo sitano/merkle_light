@@ -64,11 +64,14 @@ impl Algorithm<Hash512> for A {
 }
 
 fn tree_5() -> Vec<Hash512> {
-    ["one", "two", "three", "four"].iter().map(|x| {
-        let mut a = A::new();
-        Hashable::hash(x, &mut a);
-        a.hash()
-    }).collect::<Vec<Hash512>>()
+    ["one", "two", "three", "four"]
+        .iter()
+        .map(|x| {
+            let mut a = A::new();
+            Hashable::hash(x, &mut a);
+            a.hash()
+        })
+        .collect::<Vec<Hash512>>()
 }
 
 fn tree_160() -> Vec<Hash512> {
@@ -79,11 +82,14 @@ fn tree_160() -> Vec<Hash512> {
         rng.fill_bytes(&mut v);
     }
 
-    values.iter().map(|x| {
-        let mut a = A::new();
-        a.write(x.as_ref());
-        a.hash()
-    }).collect::<Vec<Hash512>>()
+    values
+        .iter()
+        .map(|x| {
+            let mut a = A::new();
+            a.write(x.as_ref());
+            a.hash()
+        })
+        .collect::<Vec<Hash512>>()
 }
 
 #[bench]

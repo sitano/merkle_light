@@ -64,7 +64,6 @@ impl Algorithm<CryptoSHA256Hash> for CryptoBitcoinAlgorithm {
     }
 
     fn node(&mut self, left: CryptoSHA256Hash, right: CryptoSHA256Hash) -> CryptoSHA256Hash {
-        self.reset();
         self.write(left.as_ref());
         self.write(right.as_ref());
         self.hash()
@@ -121,8 +120,11 @@ fn test_crypto_bitcoin_node() {
     let h12 = h2;
     let h13 = h3;
     let h21 = a.node(h11, h12);
+    a.reset();
     let h22 = a.node(h13, h13);
+    a.reset();
     let h31 = a.node(h21, h22);
+    a.reset();
 
     assert_eq!(
         format!("{}", HexSlice::new(h21.as_ref())),

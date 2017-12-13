@@ -107,6 +107,10 @@ const INTERIOR: u8 = 0x01;
 /// T is a hash item must be of known size at compile time, globally ordered, with
 /// default value as a neutral element of the hash space. Neutral element is
 /// interpreted as 0 or nil and required for evaluation of merkle tree.
+///
+/// [`Algorithm`] breaks the [`Hasher`] contract at `finish()`, but that is intended.
+/// This trait extends [`Hasher`] with `hash -> T` and `reset` state methods,
+/// plus implements default behavior of evaluation of MT interior nodes.
 pub trait Algorithm<T>: Hasher + Default
 where
     T: Clone + AsRef<[u8]>,
@@ -121,17 +125,17 @@ where
         *self = Self::default();
     }
 
-    /// Returns the hash value for MT leaf (prefix 0x00).
+    /// Returns hash value for MT leaf (prefix 0x00).
+    #[inline]
     fn leaf(&mut self, leaf: T) -> T {
-        self.reset();
         self.write(&[LEAF]);
         self.write(leaf.as_ref());
         self.hash()
     }
 
-    /// Returns the hash value for MT interior node (prefix 0x01).
+    /// Returns hash value for MT interior node (prefix 0x01).
+    #[inline]
     fn node(&mut self, left: T, right: T) -> T {
-        self.reset();
         self.write(&[INTERIOR]);
         self.write(left.as_ref());
         self.write(right.as_ref());
