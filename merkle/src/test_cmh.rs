@@ -46,7 +46,7 @@ impl Algorithm<Item> for CMH {
     }
 
     #[inline]
-    fn node(&mut self, left: Item, right: Item) -> Item {
+    fn node(&mut self, left: Item, right: Item, _height: usize) -> Item {
         self.write(&[1u8]);
         self.write(left.as_ref());
         self.write(&[2u8]);

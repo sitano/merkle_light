@@ -66,6 +66,7 @@ impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>> MerkleTree<T, A> {
         // build tree
         let mut i: usize = 0;
         let mut j: usize = width;
+        let mut height: usize = 0;
         while width > 1 {
             // if there is odd num of elements, fill in to the even
             if width & 1 == 1 {
@@ -78,13 +79,14 @@ impl<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>> MerkleTree<T, A> {
             // next shift
             while i < j {
                 a.reset();
-                let h = a.node(self.data[i].clone(), self.data[i + 1].clone());
+                let h = a.node(self.data[i].clone(), self.data[i + 1].clone(), height);
                 self.data.push(h);
                 i += 2;
             }
 
             width >>= 1;
             j += width;
+            height += 1;
         }
     }
 
