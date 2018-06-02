@@ -1,4 +1,5 @@
 use hash::Algorithm;
+use merkle::log2_pow2;
 
 /// Merkle tree inclusion proof for data element, for which item = Leaf(Hash(Data Item)).
 ///
@@ -46,9 +47,9 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
         for i in 1..size - 1 {
             a.reset();
             h = if self.path[i - 1] {
-                a.node(h, self.lemma[i].clone())
+                a.node(h, self.lemma[i].clone(), log2_pow2(i))
             } else {
-                a.node(self.lemma[i].clone(), h)
+                a.node(self.lemma[i].clone(), h, log2_pow2(i))
             };
         }
 
