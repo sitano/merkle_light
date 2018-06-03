@@ -55,4 +55,14 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
 
         h == self.root()
     }
+
+    /// Returns the path of this proof.
+    pub fn path(&self) -> &Vec<bool> {
+        &self.path
+    }
+
+    /// Returns the lemma of this proof.
+    pub fn lemma(&self) -> &Vec<T> {
+        &self.lemma
+    }
 }
