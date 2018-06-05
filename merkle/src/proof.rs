@@ -1,4 +1,4 @@
-use hash::Algorithm;
+use hash::{Algorithm, Hashable};
 use merkle::log2_pow2;
 
 /// Merkle tree inclusion proof for data element, for which item = Leaf(Hash(Data Item)).
@@ -54,6 +54,15 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
         }
 
         h == self.root()
+    }
+
+    /// Verifies MT inclusion proof and that leaf_data is the original leaf data for which proof was generated.
+    pub fn validate_with_data<A: Algorithm<T>>(&self, leaf_data: &Hashable<A>) -> bool {
+        let mut a = A::default();
+        a.reset();
+        leaf_data.hash(&mut a);
+
+        (a.hash() == self.item()) && self.validate::<A>()
     }
 
     /// Returns the path of this proof.
