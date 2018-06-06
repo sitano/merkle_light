@@ -136,7 +136,6 @@ impl_hash_tuple! { A B C D E F G H I J K L }
 
 impl<H: Hasher, T: Hashable<H>> Hashable<H> for [T] {
     fn hash(&self, state: &mut H) {
-        self.len().hash(state);
         Hashable::hash_slice(self, state)
     }
 }

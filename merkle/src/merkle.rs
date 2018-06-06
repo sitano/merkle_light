@@ -1,4 +1,4 @@
-use hash::{Hashable, Algorithm};
+use hash::{Algorithm, Hashable};
 use proof::Proof;
 use std::iter::FromIterator;
 use std::marker::PhantomData;

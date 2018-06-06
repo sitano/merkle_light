@@ -61,8 +61,9 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
         let mut a = A::default();
         leaf_data.hash(&mut a);
         let item = a.hash();
+        let leaf_hash = a.leaf(item);
 
-        (item == self.item()) && self.validate::<A>()
+        (leaf_hash == self.item()) && self.validate::<A>()
     }
 
     /// Returns the path of this proof.
