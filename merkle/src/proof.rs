@@ -1,4 +1,5 @@
-use hash::Algorithm;
+use hash::{Algorithm, Hashable};
+use merkle::log2_pow2;
 
 /// Merkle tree inclusion proof for data element, for which item = Leaf(Hash(Data Item)).
 ///
@@ -46,12 +47,31 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
         for i in 1..size - 1 {
             a.reset();
             h = if self.path[i - 1] {
-                a.node(h, self.lemma[i].clone())
+                a.node(h, self.lemma[i].clone(), log2_pow2(i))
             } else {
-                a.node(self.lemma[i].clone(), h)
+                a.node(self.lemma[i].clone(), h, log2_pow2(i))
             };
         }
 
         h == self.root()
+    }
+
+    /// Verifies MT inclusion proof and that leaf_data is the original leaf data for which proof was generated.
+    pub fn validate_with_data<A: Algorithm<T>>(&self, leaf_data: &Hashable<A>) -> bool {
+        let mut a = A::default();
+        leaf_data.hash(&mut a);
+        let item = a.hash();
+
+        (item == self.item()) && self.validate::<A>()
+    }
+
+    /// Returns the path of this proof.
+    pub fn path(&self) -> &Vec<bool> {
+        &self.path
+    }
+
+    /// Returns the lemma of this proof.
+    pub fn lemma(&self) -> &Vec<T> {
+        &self.lemma
     }
 }

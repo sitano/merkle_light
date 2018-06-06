@@ -135,7 +135,7 @@ where
 
     /// Returns hash value for MT interior node (prefix 0x01).
     #[inline]
-    fn node(&mut self, left: T, right: T) -> T {
+    fn node(&mut self, left: T, right: T, _height: usize) -> T {
         self.write(&[INTERIOR]);
         self.write(left.as_ref());
         self.write(right.as_ref());
