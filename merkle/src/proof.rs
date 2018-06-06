@@ -59,10 +59,10 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
     /// Verifies MT inclusion proof and that leaf_data is the original leaf data for which proof was generated.
     pub fn validate_with_data<A: Algorithm<T>>(&self, leaf_data: &Hashable<A>) -> bool {
         let mut a = A::default();
-        a.reset();
         leaf_data.hash(&mut a);
+        let item = a.hash();
 
-        (a.hash() == self.item()) && self.validate::<A>()
+        (item == self.item()) && self.validate::<A>()
     }
 
     /// Returns the path of this proof.
