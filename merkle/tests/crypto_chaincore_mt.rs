@@ -9,6 +9,7 @@ use std::hash::Hasher;
 use std::iter::FromIterator;
 use merkle_light::hash::Algorithm;
 use merkle_light::merkle::MerkleTree;
+use merkle_light::proof::Proof;
 use crypto::sha3::{Sha3, Sha3Mode};
 use crypto::digest::Digest;
 
@@ -93,4 +94,19 @@ fn test_crypto_chaincore_node() {
         format!("{}", HexSlice::new(t.root().as_ref())),
         "23704c527ffb21d1b1816938114c2fb0f6e50475d4ab5d07ebff855e7fd20335"
     );
+}
+
+#[test]
+fn test_merkle_tree_validate_data() {
+    let data = vec![1, 2, 3, 4];
+    let proof_item = data[0];
+
+    let t: MerkleTree<CryptoSHA256Hash, CryptoChainCoreAlgorithm> = MerkleTree::from_data(data);
+    let generated_proof = t.gen_proof(0);
+
+    let proof = Proof::new(
+        generated_proof.lemma().to_owned(),
+        generated_proof.path().to_owned(),
+    );
+    assert!(proof.validate_with_data::<CryptoChainCoreAlgorithm>(&proof_item));
 }

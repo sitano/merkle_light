@@ -61,6 +61,7 @@ impl<T: Eq + Clone + AsRef<[u8]>> Proof<T> {
         let mut a = A::default();
         leaf_data.hash(&mut a);
         let item = a.hash();
+        a.reset();
         let leaf_hash = a.leaf(item);
 
         (leaf_hash == self.item()) && self.validate::<A>()
