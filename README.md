@@ -1,9 +1,8 @@
 # merkle
 
-[![Build Status](https://travis-ci.org/sitano/merkle_light.svg?branch=master&style=flat)](https://travis-ci.org/sitano/merkle_light)
-[![Issues](http://img.shields.io/github/issues/sitano/merkle.svg?style=flat)](https://github.com/sitano/merkle_light/issues)
+[![Build Status](https://travis-ci.com/filecoin-project/merkle_light.svg?branch=master&style=flat)](https://travis-ci.com/filecoin-project/merkle_light)
+[![Issues](http://img.shields.io/github/issues/filecoin-project/merkle_light.svg?style=flat)](https://github.com/filecoin_project/merkle_light/issues)
 ![License](https://img.shields.io/badge/license-bsd3-brightgreen.svg?style=flat)
-[![Crates.io](https://img.shields.io/crates/v/merkle_light.svg)](https://crates.io/crates/merkle_light)
 
 *merkle* is a lightweight Rust implementation of a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree).
 
