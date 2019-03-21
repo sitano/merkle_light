@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 use hash::*;
-use merkle::MerkleTree;
-use merkle::next_pow2;
 use merkle::log2_pow2;
+use merkle::next_pow2;
+use merkle::{Element, MerkleTree, MmapStore, VecStore};
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;
@@ -81,10 +81,23 @@ fn test_hasher_light() {
     assert_eq!(format!("{:#X}", h), "0x31323334353637383132333435363738");
 }
 
+impl Element for [u8; 16] {
+    fn byte_len() -> usize {
+        16
+    }
+
+    fn from_slice(bytes: &[u8]) -> Self {
+        assert_eq!(bytes.len(), Self::byte_len());
+        let mut el = [0u8; 16];
+        el[..].copy_from_slice(bytes);
+        el
+    }
+}
+
 #[test]
 fn test_from_slice() {
     let x = [String::from("ars"), String::from("zxc")];
-    let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::from_data(&x);
+    let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::from_data(&x);
     assert_eq!(
         mt.as_slice(),
         [
@@ -105,11 +118,12 @@ fn test_from_slice() {
 #[test]
 fn test_from_iter() {
     let mut a = XOR128::new();
-    let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::from_iter(["a", "b", "c"].iter().map(|x| {
-        a.reset();
-        x.hash(&mut a);
-        a.hash()
-    }));
+    let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
+        MerkleTree::from_iter(["a", "b", "c"].iter().map(|x| {
+            a.reset();
+            x.hash(&mut a);
+            a.hash()
+        }));
     assert_eq!(mt.len(), 7);
     assert_eq!(mt.height(), 3);
 }
@@ -188,9 +202,10 @@ fn test_simple_tree() {
             [1, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ],
     ];
+
     for items in 2..8 {
         let mut a = XOR128::new();
-        let mt: MerkleTree<[u8; 16], XOR128> = MerkleTree::from_iter(
+        let mt_base: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::from_iter(
             [1, 2, 3, 4, 5, 6, 7, 8]
                 .iter()
                 .map(|x| {
@@ -201,14 +216,74 @@ fn test_simple_tree() {
                 .take(items),
         );
 
-        assert_eq!(mt.leafs(), items);
-        assert_eq!(mt.height(), log2_pow2(next_pow2(mt.len())));
-        assert_eq!(mt.as_slice(), answer[items - 2].as_slice());
-        assert_eq!(mt[0], mt[0]);
+        assert_eq!(mt_base.leafs(), items);
+        assert_eq!(mt_base.height(), log2_pow2(next_pow2(mt_base.len())));
+        assert_eq!(mt_base.as_slice(), answer[items - 2].as_slice());
+        assert_eq!(mt_base[0], mt_base[0]);
 
-        for i in 0..mt.leafs() {
-            let p = mt.gen_proof(i);
+        for i in 0..mt_base.leafs() {
+            let p = mt_base.gen_proof(i);
             assert!(p.validate::<XOR128>());
+        }
+
+        let mt0: MerkleTree<[u8; 16], XOR128, MmapStore<_>> = MerkleTree::from_iter(
+            [1, 2, 3, 4, 5, 6, 7, 8]
+                .iter()
+                .map(|x| {
+                    a.reset();
+                    x.hash(&mut a);
+                    a.hash()
+                })
+                .take(items),
+        );
+
+        assert_eq!(mt0.leafs(), items);
+        assert_eq!(mt0.height(), log2_pow2(next_pow2(mt0.len())));
+        // assert_eq!(mt0.as_slice(), answer[items - 2].as_slice());
+        // assert_eq!(mt0[0], mt0[0]);
+
+        for i in 0..mt0.leafs() {
+            let p = mt0.gen_proof(i);
+            assert!(p.validate::<XOR128>());
+        }
+
+        let mut a2 = XOR128::new();
+        let leafs: Vec<u8> = [1, 2, 3, 4, 5, 6, 7, 8]
+            .iter()
+            .map(|x| {
+                a.reset();
+                x.hash(&mut a);
+                a.hash()
+            })
+            .take(items)
+            .map(|item| {
+                a2.reset();
+                a2.leaf(item).as_ref().to_vec()
+            })
+            .flatten()
+            .collect();
+        {
+            let mt1: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
+                MerkleTree::from_byte_slice(&leafs);
+            assert_eq!(mt1.leafs(), items);
+            assert_eq!(mt1.height(), log2_pow2(next_pow2(mt1.len())));
+            assert_eq!(mt_base.as_slice(), answer[items - 2].as_slice());
+
+            for i in 0..mt1.leafs() {
+                let p = mt1.gen_proof(i);
+                assert!(p.validate::<XOR128>());
+            }
+        }
+
+        {
+            let mt2: MerkleTree<[u8; 16], XOR128, MmapStore<_>> =
+                MerkleTree::from_byte_slice(&leafs);
+            assert_eq!(mt2.leafs(), items);
+            assert_eq!(mt2.height(), log2_pow2(next_pow2(mt2.len())));
+            for i in 0..mt2.leafs() {
+                let p = mt2.gen_proof(i);
+                assert!(p.validate::<XOR128>());
+            }
         }
     }
 }
