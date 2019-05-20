@@ -5,13 +5,13 @@
 mod hash512;
 mod ringx;
 
-extern crate merkle_light;
+extern crate merkletree;
 extern crate rand;
 extern crate test;
 
 use hash512::Hash512;
-use merkle_light::hash::{Algorithm, Hashable};
-use merkle_light::merkle::MerkleTree;
+use merkletree::hash::{Algorithm, Hashable};
+use merkletree::merkle::MerkleTree;
 use rand::Rng;
 use ringx::Context;
 use ringx::SHA512;

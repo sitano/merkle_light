@@ -5,7 +5,7 @@
 mod hash512;
 
 extern crate crypto;
-extern crate merkle_light;
+extern crate merkletree;
 extern crate rand;
 extern crate rayon;
 extern crate test;
@@ -13,8 +13,8 @@ extern crate test;
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
 use hash512::Hash512;
-use merkle_light::hash::{Algorithm, Hashable};
-use merkle_light::merkle::MerkleTree;
+use merkletree::hash::{Algorithm, Hashable};
+use merkletree::merkle::MerkleTree;
 use rand::Rng;
 use rayon::prelude::*;
 use std::hash::Hasher;

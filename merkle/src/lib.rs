@@ -73,7 +73,7 @@
 //! ```
 //! #[cfg(feature = "chaincore")]
 //! extern crate crypto;
-//! extern crate merkle_light;
+//! extern crate merkletree;
 //!
 //! #[cfg(feature = "chaincore")]
 //! mod example {
@@ -82,7 +82,7 @@
 //!     use std::iter::FromIterator;
 //!     use crypto::sha3::{Sha3, Sha3Mode};
 //!     use crypto::digest::Digest;
-//!     use merkle_light::hash::{Algorithm, Hashable};
+//!     use merkletree::hash::{Algorithm, Hashable};
 //!
 //!     pub struct ExampleAlgorithm(Sha3);
 //!
@@ -129,7 +129,7 @@
 //! #[cfg(feature = "chaincore")]
 //! {
 //!     use example::ExampleAlgorithm;
-//!     use merkle_light::merkle::{MerkleTree,VecStore};
+//!     use merkletree::merkle::{MerkleTree,VecStore};
 //!     use std::iter::FromIterator;
 //!
 //!     let mut h1 = [0u8; 32];

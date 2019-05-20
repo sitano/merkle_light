@@ -1,5 +1,5 @@
 [package]
-name = "merkle_light"
+name = "merkletree"
 version = "0.3.1"
 authors = [
   "Ivan Prisyazhnyy <john.koepi@gmail.com>"
@@ -7,22 +7,16 @@ authors = [
 
 description   = "Light merkle tree implementation with SPV support and dependency agnostic."
 license       = "BSD-3-Clause"
-homepage      = "https://github.com/sitano/merkle_light"
-repository    = "https://github.com/sitano/merkle_light"
-documentation = "https://sitano.github.io/merkle_light/merkle_light/index.html"
+homepage      = "https://github.com/filecoin-project/merkle_light"
+repository    = "https://github.com/filecoin-project/merkle_light"
+documentation = "https://docs.rs/merkletree"
 readme        = "README.md"
 keywords      = ["merkle", "merkle-tree"]
 categories    = ["data-structures", "cryptography"]
 
 [package.metadata.release]
-sign-commit = true
-upload-doc = true
-doc-branch = "gh-pages"
-pre-release-commit-message = "Release version {{version}}."
-pro-release-commit-message = "Start next development iteration {{version}}."
-tag-message = "Release version {{version}}."
-doc-commit-message = "Update documentation."
-dev-version-ext = "pre"
+pre-release-commit-message = "chore(release): release {{version}}"
+pro-release-commit-message = "chore(release): starting development cycle for {{next_version}}"
 
 [dependencies]
 rayon = "1.0.0"

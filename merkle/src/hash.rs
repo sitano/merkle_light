@@ -15,10 +15,10 @@ use std::hash::Hasher;
 ///
 /// ```text
 /// #[macro_use]
-/// extern crate merkle_light_derive;
-/// extern crate merkle_light;
+/// extern crate merkletree_derive;
+/// extern crate merkletree;
 ///
-/// use merkle_light::hash::Hashable;
+/// use merkletree::hash::Hashable;
 ///
 /// fn main() {
 ///     #[derive(Hashable)]
@@ -33,9 +33,9 @@ use std::hash::Hasher;
 /// implement the `Hashable` trait yourself:
 ///
 /// ```
-/// extern crate merkle_light;
+/// extern crate merkletree;
 ///
-/// use merkle_light::hash::Hashable;
+/// use merkletree::hash::Hashable;
 /// use std::hash::Hasher;
 /// use std::collections::hash_map::DefaultHasher;
 ///

@@ -1,11 +1,11 @@
 #![cfg(test)]
 #![cfg(feature = "bitcoin")]
 
-extern crate merkle_light;
+extern crate merkletree;
 extern crate ring;
-use merkle_light::hash::{Algorithm, Hashable};
-use merkle_light::merkle::MerkleTree;
-use merkle_light::merkle::VecStore;
+use merkletree::hash::{Algorithm, Hashable};
+use merkletree::merkle::MerkleTree;
+use merkletree::merkle::VecStore;
 use ring::digest::{Context, SHA256};
 use std::fmt;
 use std::hash::Hasher;

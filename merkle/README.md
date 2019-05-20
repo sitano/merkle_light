@@ -1,11 +1,12 @@
 # merkle
 
-[![Build Status](https://travis-ci.org/sitano/merkle_light.svg?branch=master&style=flat)](https://travis-ci.org/sitano/merkle_light)
-[![Issues](http://img.shields.io/github/issues/sitano/merkle.svg?style=flat)](https://github.com/sitano/merkle_light/issues)
+[![Build Status](https://travis-ci.com/filecoin-project/merkle_light.svg?branch=master&style=flat)](https://travis-ci.com/filecoin-project/merkle_light)
 ![License](https://img.shields.io/badge/license-bsd3-brightgreen.svg?style=flat)
-[![Crates.io](https://img.shields.io/crates/v/merkle_light.svg)](https://crates.io/crates/merkle_light)
+[![Crates.io](https://img.shields.io/crates/v/merkletree.svg)](https://crates.io/crates/merkletree)
 
 *merkle* is a lightweight Rust implementation of a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree).
+
+> This is a fork of the great [merkle_light](https://github.com/sitano/merkle_light) library.
 
 ## Features
 
@@ -23,7 +24,7 @@
 
 ## Documentation
 
-Documentation is [available](https://sitano.github.io/merkle_light/merkle_light/index.html).
+Documentation is [available](https://docs.rs/merkletree).
 
 # Examples
 
@@ -38,15 +39,15 @@ Documentation is [available](https://sitano.github.io/merkle_light/merkle_light/
 
 ```
 extern crate crypto;
-extern crate merkle_light;
+extern crate merkletree;
 
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;
 use crypto::sha3::{Sha3, Sha3Mode};
 use crypto::digest::Digest;
-use merkle_light::hash::{Algorithm, Hashable};
-use merkle_light::merkle::MerkleTree;
+use merkletree::hash::{Algorithm, Hashable};
+use merkletree::merkle::MerkleTree;
 
 pub struct ExampleAlgorithm(Sha3);
 
@@ -104,7 +105,7 @@ fn main() {
 ## Bug Reporting
 
 Please report bugs either as pull requests or as issues in [the issue
-tracker](https://github.com/sitano/merkle_light). *merkle* has a
+tracker](https://github.com/filecoin-project/merkle_light). *merkle* has a
 **full disclosure** vulnerability policy. **Please do NOT attempt to report
 any security vulnerability in this code privately to anybody.**
 

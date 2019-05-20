@@ -2,14 +2,14 @@
 #![cfg(feature = "chaincore")]
 
 extern crate crypto;
-extern crate merkle_light;
+extern crate merkletree;
 
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
-use merkle_light::hash::Algorithm;
-use merkle_light::merkle::MerkleTree;
-use merkle_light::merkle::VecStore;
-use merkle_light::proof::Proof;
+use merkletree::hash::Algorithm;
+use merkletree::merkle::MerkleTree;
+use merkletree::merkle::VecStore;
+use merkletree::proof::Proof;
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;

@@ -2,13 +2,13 @@
 #![cfg(feature = "bitcoin")]
 
 extern crate crypto;
-extern crate merkle_light;
+extern crate merkletree;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
-use merkle_light::hash::{Algorithm, Hashable};
-use merkle_light::merkle::MerkleTree;
-use merkle_light::merkle::VecStore;
+use merkletree::hash::{Algorithm, Hashable};
+use merkletree::merkle::MerkleTree;
+use merkletree::merkle::VecStore;
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;
