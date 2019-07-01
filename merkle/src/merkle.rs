@@ -245,7 +245,6 @@ impl<E: Element> Store<E> for MmapStore<E> {
         let b = E::byte_len();
         assert_eq!(buf.len() % b, 0);
         self.store[start * b..start * b + buf.len()].copy_from_slice(buf);
-        self.len += buf.len() / b;
         self.len = std::cmp::max(self.len, start + buf.len() / b);
     }
 

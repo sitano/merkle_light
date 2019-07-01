@@ -125,9 +125,9 @@ fn test_read_into() {
     let x = [String::from("ars"), String::from("zxc")];
     let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::from_data(&x);
     let target_data = [
-            [0, 97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 27, 10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 27, 10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
 
     let mut read_buffer: [u8; 16] = [0; 16];
@@ -355,4 +355,18 @@ fn test_simple_tree() {
             }
         }
     }
+}
+
+#[test]
+fn test_large_tree() {
+    let mut a = XOR128::new();
+    let count = 1024 * 1024;
+    let mt0: MerkleTree<[u8; 16], XOR128, MmapStore<_>> =
+        MerkleTree::from_iter((0..count).map(|x| {
+            a.reset();
+            x.hash(&mut a);
+            a.hash()
+        }));
+
+    assert_eq!(mt0.len(), 2 * count - 1);
 }
