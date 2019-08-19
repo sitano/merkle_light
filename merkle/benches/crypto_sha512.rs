@@ -14,7 +14,7 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha512;
 use hash512::Hash512;
 use merkletree::hash::{Algorithm, Hashable};
-use merkletree::merkle::{DiskMmapStore, MerkleTree, VecStore};
+use merkletree::merkle::{DiskStore, MerkleTree, VecStore};
 use rand::Rng;
 use rayon::prelude::*;
 use std::hash::Hasher;
@@ -162,7 +162,7 @@ fn bench_crypto_sha512_from_data_160_vec(b: &mut Bencher) {
 #[bench]
 fn bench_crypto_sha512_from_data_160_mmap(b: &mut Bencher) {
     let values = tree_160();
-    b.iter(|| MerkleTree::<Hash512, A, DiskMmapStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, DiskStore<_>>::from_iter(values.clone()));
 }
 
 #[bench]
@@ -180,7 +180,7 @@ fn bench_crypto_sha512_from_data_30000_vec(b: &mut Bencher) {
 #[bench]
 fn bench_crypto_sha512_from_data_30000_mmap(b: &mut Bencher) {
     let values = tree_30000();
-    b.iter(|| MerkleTree::<Hash512, A, DiskMmapStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, DiskStore<_>>::from_iter(values.clone()));
 }
 
 #[bench]

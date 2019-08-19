@@ -20,7 +20,7 @@ impl CMH {
 impl Hasher for CMH {
     #[inline]
     fn write(&mut self, msg: &[u8]) {
-        <Hasher>::write(&mut self.0, msg)
+        <dyn Hasher>::write(&mut self.0, msg)
     }
 
     #[inline]

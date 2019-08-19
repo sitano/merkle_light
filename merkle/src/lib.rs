@@ -164,6 +164,8 @@ extern crate memmap;
 
 extern crate tempfile;
 
+extern crate positioned_io;
+
 /// Hash infrastructure for items in Merkle tree.
 pub mod hash;
 

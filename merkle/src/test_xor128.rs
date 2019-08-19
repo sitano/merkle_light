@@ -2,7 +2,7 @@
 
 use hash::*;
 use merkle::{log2_pow2, next_pow2};
-use merkle::{DiskMmapStore, Element, MerkleTree, MmapStore, VecStore, SMALL_TREE_BUILD};
+use merkle::{DiskStore, Element, MerkleTree, MmapStore, VecStore, SMALL_TREE_BUILD};
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;
@@ -317,34 +317,63 @@ fn test_simple_tree() {
             let temp_dir = tempfile::tempdir().unwrap();
             // Hold on to the directory to avoid losing the created file-mmap inside.
 
-            let disk_mmap_leaves: DiskMmapStore<[u8; 16]> = DiskMmapStore::new_with_path(
+            let disk_leaves: DiskStore<[u8; 16]> = DiskStore::new_with_path(
                 next_pow2(leafs.len()),
-                &temp_dir
-                    .path()
-                    .to_owned()
-                    .join("test-xor-128-disk-mmap-leaves"),
+                &temp_dir.path().to_owned().join("test-xor-128-disk-leaves"),
             );
 
-            let disk_mmap_top_half: DiskMmapStore<[u8; 16]> = DiskMmapStore::new_with_path(
+            let disk_top_half: DiskStore<[u8; 16]> = DiskStore::new_with_path(
                 next_pow2(leafs.len()) - 1,
                 &temp_dir
                     .path()
                     .to_owned()
-                    .join("test-xor-128-disk-mmap-top-half"),
+                    .join("test-xor-128-disk-top-half"),
             );
 
-            let mt3: MerkleTree<_, XOR128, DiskMmapStore<_>> = MerkleTree::from_data_with_store(
+            let mt3: MerkleTree<_, XOR128, DiskStore<_>> = MerkleTree::from_data_with_store(
                 leafs.chunks_exact(16).map(|chunk| {
                     let mut array: [u8; 16] = Default::default();
                     array.copy_from_slice(chunk);
                     array
                 }),
-                disk_mmap_leaves,
-                disk_mmap_top_half,
+                disk_leaves,
+                disk_top_half,
             );
 
-            // Signal an offload before reloading when accessed later.
-            assert!(mt3.try_offload_store());
+            assert_eq!(mt3.leafs(), items);
+            assert_eq!(mt3.height(), log2_pow2(next_pow2(mt3.len())));
+            for i in 0..mt3.leafs() {
+                let p = mt3.gen_proof(i);
+                assert!(p.validate::<XOR128>());
+            }
+        }
+
+        {
+            let temp_dir = tempfile::tempdir().unwrap();
+            // Hold on to the directory to avoid losing the created file-mmap inside.
+
+            let disk_leaves: DiskStore<[u8; 16]> = DiskStore::new_with_path(
+                next_pow2(leafs.len()),
+                &temp_dir.path().to_owned().join("test-xor-128-disk-leaves"),
+            );
+
+            let disk_top_half: DiskStore<[u8; 16]> = DiskStore::new_with_path(
+                next_pow2(leafs.len()) - 1,
+                &temp_dir
+                    .path()
+                    .to_owned()
+                    .join("test-xor-128-disk-top-half"),
+            );
+
+            let mt3: MerkleTree<_, XOR128, DiskStore<_>> = MerkleTree::from_data_with_store(
+                leafs.chunks_exact(16).map(|chunk| {
+                    let mut array: [u8; 16] = Default::default();
+                    array.copy_from_slice(chunk);
+                    array
+                }),
+                disk_leaves,
+                disk_top_half,
+            );
 
             assert_eq!(mt3.leafs(), items);
             assert_eq!(mt3.height(), log2_pow2(next_pow2(mt3.len())));
@@ -385,13 +414,13 @@ fn test_large_tree() {
             }));
         assert_eq!(mt_mmap.len(), 2 * count - 1);
 
-        let mt_disk_mmap: MerkleTree<[u8; 16], XOR128, DiskMmapStore<_>> =
+        let mt_disk: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
             MerkleTree::from_iter((0..count).map(|x| {
                 a.reset();
                 x.hash(&mut a);
                 i.hash(&mut a);
                 a.hash()
             }));
-        assert_eq!(mt_disk_mmap.len(), 2 * count - 1);
+        assert_eq!(mt_disk.len(), 2 * count - 1);
     }
 }

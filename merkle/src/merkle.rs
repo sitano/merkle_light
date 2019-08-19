@@ -1,6 +1,7 @@
 use hash::{Algorithm, Hashable};
 use memmap::MmapMut;
 use memmap::MmapOptions;
+use positioned_io::{ReadAt, WriteAt};
 use proof::Proof;
 use rayon::prelude::*;
 use std::fs::File;
@@ -8,7 +9,7 @@ use std::fs::OpenOptions;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::ops::{self, Index};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 use tempfile::tempfile;
 
@@ -19,6 +20,16 @@ use tempfile::tempfile;
 /// use the new build algorithm, optimized for memory rather than speed, allocating
 /// as less as possible with multiple threads competing to get the write lock.
 pub const SMALL_TREE_BUILD: usize = 1024;
+
+// Number of nodes to process in parallel during the `build` stage.
+pub const BUILD_CHUNK_NODES: usize = 1024;
+
+// Number of batched nodes processed and stored together in `populate_leaves` to
+// avoid single `push`es which degrades performance for `DiskStore`.
+pub const BUILD_LEAVES_BLOCK_SIZE: usize = 64 * BUILD_CHUNK_NODES;
+
+// FIXME: Hand-picked constants, some proper benchmarks should be done
+// to choose more appropriate values and document the decision.
 
 /// Merkle Tree.
 ///
@@ -64,7 +75,7 @@ where
     height: usize,
 
     // Cache with the `root` of the tree built from `data`. This allows to
-    // not access the `Store` when offloaded (`DiskMmapStore` case).
+    // not access the `Store` (e.g., access to disks in `DiskStore`).
     root: T,
 
     _a: PhantomData<A>,
@@ -109,13 +120,9 @@ pub trait Store<E: Element>:
     fn is_empty(&self) -> bool;
     fn push(&mut self, el: E);
 
-    // Signal to offload the `data` from memory if possible (`DiskMmapStore`
-    // case). When the `data` is read/written again it should be automatically
-    // reloaded. This function is only a hint with an optional implementation
-    // (its mechanism should be transparent to the user who doesn't need to
-    // manually reload).
-    // Returns `true` if it was able to comply.
-    fn try_offload(&self) -> bool;
+    // Sync contents to disk (if it exists). This function is used to avoid
+    // unnecessary flush calls at the cost of added code complexity.
+    fn sync(&self) {}
 }
 
 #[derive(Debug, Clone)]
@@ -194,10 +201,6 @@ impl<E: Element> Store<E> for VecStore<E> {
 
     fn push(&mut self, el: E) {
         self.0.push(el);
-    }
-
-    fn try_offload(&self) -> bool {
-        false
     }
 }
 
@@ -309,10 +312,6 @@ impl<E: Element> Store<E> for MmapStore<E> {
 
         self.write_at(el, l);
     }
-
-    fn try_offload(&self) -> bool {
-        false
-    }
 }
 
 impl<E: Element> Clone for MmapStore<E> {
@@ -324,37 +323,22 @@ impl<E: Element> Clone for MmapStore<E> {
     }
 }
 
-/// File-mapping version of `MmapStore` with the added `new_with_path` method
-/// that allows to set its path (otherwise a temporary file is used which is
-/// cleaned up after we drop this structure).
+/// Disk-only store use to reduce memory to the minimum at the cost of build
+/// time performance. Most of its I/O logic is in the `store_copy_from_slice`
+/// and `store_read_range` functions.
 #[derive(Debug)]
-pub struct DiskMmapStore<E: Element> {
-    // Implementing the `store` with `Arc`/`RwLock` to avoid adding lifetimes
-    // parameters to the struct (which might have larger repercussions in the
-    // definitions of the `MerkleTree` and its consumers. Also used for its
-    // coordination mechanisms, but it's not clearly defined if `MerkleTree`
-    // (and `Store`) should be thread-safe (so they might be removed later).
-    store: Arc<RwLock<Option<MmapMut>>>,
-
+pub struct DiskStore<E: Element> {
     len: usize,
     _e: PhantomData<E>,
     file: File,
-    // We need to save the `File` in case we're creating a `tempfile()`
-    // otherwise it will get cleaned after we return from `new()`.
 
-    // We cache the `store.len()` call to avoid accessing the store when
-    // it's offloaded. Not to be confused with `len`, this saves the total
-    // size of the `store` and the other one keeps track of used `E` slots
-    // in the `DiskMmapStore`.
+    // We cache the `store.len()` call to avoid accessing disk unnecessarily.
+    // Not to be confused with `len`, this saves the total size of the `store`
+    // in bytes and the other one keeps track of used `E` slots in the `DiskStore`.
     store_size: usize,
-
-    // We save the arguments of `new_with_path` to reconstruct it and reload
-    // the `MmapMut` after offload has been called.
-    path: PathBuf,
-    size: Option<usize>,
 }
 
-impl<E: Element> ops::Deref for DiskMmapStore<E> {
+impl<E: Element> ops::Deref for DiskStore<E> {
     type Target = [E];
 
     fn deref(&self) -> &Self::Target {
@@ -362,24 +346,19 @@ impl<E: Element> ops::Deref for DiskMmapStore<E> {
     }
 }
 
-impl<E: Element> Store<E> for DiskMmapStore<E> {
+impl<E: Element> Store<E> for DiskStore<E> {
     #[allow(unsafe_code)]
     fn new(size: usize) -> Self {
         let byte_len = E::byte_len() * size;
-        let file: File = tempfile().expect("couldn't create temp file");
+        let file = tempfile().expect("couldn't create temp file");
         file.set_len(byte_len as u64)
             .unwrap_or_else(|_| panic!("couldn't set len of {}", byte_len));
 
-        let mmap = unsafe { MmapMut::map_mut(&file).expect("couldn't create map_mut") };
-        let mmap_size = mmap.len();
-        DiskMmapStore {
-            store: Arc::new(RwLock::new(Some(mmap))),
+        DiskStore {
             len: 0,
             _e: Default::default(),
             file,
-            store_size: mmap_size,
-            path: PathBuf::new(),
-            size: None,
+            store_size: byte_len,
         }
     }
 
@@ -388,8 +367,7 @@ impl<E: Element> Store<E> for DiskMmapStore<E> {
 
         let mut res = Self::new(size);
 
-        let end = data.len();
-        res.store_copy_from_slice(0, end, data);
+        res.store_copy_from_slice(0, data);
         res.len = data.len() / E::byte_len();
 
         res
@@ -397,14 +375,14 @@ impl<E: Element> Store<E> for DiskMmapStore<E> {
 
     fn write_at(&mut self, el: E, i: usize) {
         let b = E::byte_len();
-        self.store_copy_from_slice(i * b, (i + 1) * b, el.as_ref());
+        self.store_copy_from_slice(i * b, el.as_ref());
         self.len = std::cmp::max(self.len, i + 1);
     }
 
     fn copy_from_slice(&mut self, buf: &[u8], start: usize) {
         let b = E::byte_len();
         assert_eq!(buf.len() % b, 0);
-        self.store_copy_from_slice(start * b, start * b + buf.len(), buf);
+        self.store_copy_from_slice(start * b, buf);
         self.len = std::cmp::max(self.len, start + buf.len() / b);
     }
 
@@ -467,27 +445,18 @@ impl<E: Element> Store<E> for DiskMmapStore<E> {
         self.write_at(el, l);
     }
 
-    // Offload the `store` in the case it was constructed with `new_with_path`.
-    // Temporary files with no path (created from `new`) can't be offloaded.
-    fn try_offload(&self) -> bool {
-        if self.path.as_os_str().is_empty() {
-            // Temporary file.
-            return false;
-        }
-
-        *self.store.write().unwrap() = None;
-
-        true
+    fn sync(&self) {
+        self.file.sync_all().expect("failed to sync file");
     }
 }
 
-impl<E: Element> DiskMmapStore<E> {
+impl<E: Element> DiskStore<E> {
     #[allow(unsafe_code)]
     // FIXME: Return errors on failure instead of panicking
     //  (see https://github.com/filecoin-project/merkle_light/issues/19).
     pub fn new_with_path(size: usize, path: &Path) -> Self {
         let byte_len = E::byte_len() * size;
-        let file: File = OpenOptions::new()
+        let file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
@@ -495,16 +464,11 @@ impl<E: Element> DiskMmapStore<E> {
             .expect("cannot create file");
         file.set_len(byte_len as u64).unwrap();
 
-        let mmap = unsafe { MmapMut::map_mut(&file).expect("couldn't create map_mut") };
-        let mmap_size = mmap.len();
-        DiskMmapStore {
-            store: Arc::new(RwLock::new(Some(mmap))),
+        DiskStore {
             len: 0,
             _e: Default::default(),
             file,
-            store_size: mmap_size,
-            path: path.to_path_buf(),
-            size: Some(size),
+            store_size: byte_len,
         }
     }
 
@@ -513,66 +477,40 @@ impl<E: Element> DiskMmapStore<E> {
     }
 
     pub fn store_read_range(&self, start: usize, end: usize) -> Vec<u8> {
-        self.reload_store();
-        // FIXME: Not actually thread safe, the `store` could have been offloaded
-        //  after this call (but we're not striving for thread-safety at the moment).
+        let read_len = end - start;
+        let mut read_data = vec![0; read_len];
 
-        match *self.store.read().unwrap() {
-            Some(ref mmap) => mmap[start..end].to_vec(),
-            None => panic!("The store has not been reloaded"),
-        }
+        assert_eq!(
+            self.file
+                .read_at(start as u64, &mut read_data)
+                .unwrap_or_else(|_| panic!(
+                    "failed to read {} bytes from file at offset {}",
+                    read_len, start
+                )),
+            read_len
+        );
+
+        read_data
     }
 
     pub fn store_read_into(&self, start: usize, end: usize, buf: &mut [u8]) {
-        self.reload_store();
-        // FIXME: Not actually thread safe, the `store` could have been offloaded
-        //  after this call (but we're not striving for thread-safety at the moment).
-
-        match *self.store.read().unwrap() {
-            Some(ref mmap) => buf.copy_from_slice(&mmap[start..end]),
-            None => panic!("The store has not been reloaded"),
-        }
+        buf.copy_from_slice(&self.store_read_range(start, end));
     }
 
-    pub fn store_copy_from_slice(&self, start: usize, end: usize, slice: &[u8]) {
-        self.reload_store();
-        match *self.store.write().unwrap() {
-            Some(ref mut mmap) => mmap[start..end].copy_from_slice(slice),
-            None => panic!("The store has not been reloaded"),
-        }
-    }
-
-    // Checks if the `store` is loaded and reloads it if necessary.
-    // FIXME: Check how to compact this logic.
-    fn reload_store(&self) {
-        let need_to_reload_store = self.store.read().unwrap().is_none();
-
-        if need_to_reload_store {
-            let new_store: DiskMmapStore<E> = DiskMmapStore::new_with_path(
-                self.size.expect("couldn't find size"),
-                Path::new(&self.path),
-            );
-            //            self.store = Arc::new(RwLock::new();
-            // FIXME: Extract part of the `MmapMut` creation logic to avoid
-            //  recreating the entire `DiskMmapStore`.
-
-            let mut store = self.store.write().unwrap();
-            let new_store = Arc::try_unwrap(new_store.store)
-                .unwrap()
-                .into_inner()
-                .unwrap();
-
-            std::mem::replace(&mut *store, new_store);
-        }
+    pub fn store_copy_from_slice(&mut self, start: usize, slice: &[u8]) {
+        assert!(start + slice.len() <= self.store_size);
+        self.file
+            .write_at(start as u64, slice)
+            .expect("failed to write file");
     }
 }
 
 // FIXME: Fake `Clone` implementation to accomodate the artificial call in
 //  `from_data_with_store`, we won't actually duplicate the mmap memory,
 //  just recreate the same object (as the original will be dropped).
-impl<E: Element> Clone for DiskMmapStore<E> {
-    fn clone(&self) -> DiskMmapStore<E> {
-        unimplemented!("We can't clone a mmap with an already associated file");
+impl<E: Element> Clone for DiskStore<E> {
+    fn clone(&self) -> DiskStore<E> {
+        unimplemented!("We can't clone a store with an already associated file");
     }
 }
 
@@ -593,8 +531,8 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     }
 
     /// Creates new merkle from an already allocated `Store` (used with
-    /// `DiskMmapStore::new_with_path` to set its path before instantiating
-    /// the MT, which would otherwise just call `DiskMmapStore::new`).
+    /// `DiskStore::new_with_path` to set its path before instantiating
+    /// the MT, which would otherwise just call `DiskStore::new`).
     // FIXME: Taken from `MerkleTree::from_iter` to avoid adding more complexity,
     //  it should receive a `parallel` flag to decide what to do.
     // FIXME: We're repeating too much code here, `from_iter` (and
@@ -611,19 +549,9 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
 
         let pow = next_pow2(leafs);
 
-        // leafs
-        let mut a = A::default();
-        for item in iter {
-            a.reset();
-            leaves.push(a.leaf(item));
-        }
+        populate_leaves::<T, A, K, I>(&mut leaves, iter);
 
         Self::build(leaves, top_half, leafs, log2_pow2(2 * pow))
-    }
-
-    #[inline]
-    pub fn try_offload_store(&self) -> bool {
-        self.leaves.try_offload() && self.top_half.try_offload()
     }
 
     #[inline]
@@ -693,14 +621,15 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
             // Allocate `width` indexes during operation (which is a negligible memory bloat
             // compared to the 32-bytes size of the nodes stored in the `Store`s) and hash each
             // pair of nodes to write them to the next level in concurrent threads.
-            // Process `chunk_size` nodes in each thread at a time to reduce contention, optimized
-            // for big sector sizes (small ones will just have one thread doing all the work).
-            let chunk_size = 1024;
-            debug_assert_eq!(chunk_size % 2, 0);
-            Vec::from_iter((read_start..read_start + width).step_by(chunk_size))
+            // Process `BUILD_CHUNK_NODES` nodes in each thread at a time to reduce contention,
+            // optimized for big sector sizes (small ones will just have one thread doing all
+            // the work).
+            debug_assert_eq!(BUILD_CHUNK_NODES % 2, 0);
+            Vec::from_iter((read_start..read_start + width).step_by(BUILD_CHUNK_NODES))
                 .par_iter()
                 .for_each(|&chunk_index| {
-                    let chunk_size = std::cmp::min(chunk_size, read_start + width - chunk_index);
+                    let chunk_size =
+                        std::cmp::min(BUILD_CHUNK_NODES, read_start + width - chunk_index);
 
                     let chunk_nodes = {
                         // Read everything taking the lock once.
@@ -738,6 +667,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
             level_node_index += width;
             level += 1;
             width >>= 1;
+            write_store_lock.write().unwrap().sync();
         }
 
         assert_eq!(height, level + 1);
@@ -995,6 +925,9 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromParallelIterator<T> for Merkl
         for v in vs.into_iter() {
             leaves.push(v);
         }
+        leaves.sync();
+        // FIXME: Use a similar construction to `populate_leaves`
+        // for parallel threads.
 
         assert!(leafs > 1);
         Self::build(leaves, top_half, leafs, log2_pow2(2 * pow))
@@ -1014,12 +947,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIterator<T> for MerkleTree<T,
         let mut leaves = K::new(pow);
         let top_half = K::new(pow);
 
-        // leafs
-        let mut a = A::default();
-        for item in iter {
-            a.reset();
-            leaves.push(a.leaf(item));
-        }
+        populate_leaves::<T, A, K, I>(&mut leaves, iter);
 
         Self::build(leaves, top_half, leafs, log2_pow2(2 * pow))
     }
@@ -1061,4 +989,28 @@ pub fn next_pow2(mut n: usize) -> usize {
 /// find power of 2 of a number which is power of 2
 pub fn log2_pow2(n: usize) -> usize {
     n.trailing_zeros() as usize
+}
+
+fn populate_leaves<T: Element, A: Algorithm<T>, K: Store<T>, I: IntoIterator<Item = T>>(
+    leaves: &mut K,
+    iter: <I as std::iter::IntoIterator>::IntoIter,
+) {
+    let mut buf = Vec::with_capacity(BUILD_LEAVES_BLOCK_SIZE * T::byte_len());
+
+    let mut a = A::default();
+    for item in iter {
+        a.reset();
+        buf.extend(a.leaf(item).as_ref());
+        if buf.len() >= BUILD_LEAVES_BLOCK_SIZE * T::byte_len() {
+            let leaves_len = leaves.len();
+            // FIXME: Integrate into `len()` call into `copy_from_slice`
+            // once we update to `stable` 1.36.
+            leaves.copy_from_slice(&buf, leaves_len);
+            buf.clear();
+        }
+    }
+    let leaves_len = leaves.len();
+    leaves.copy_from_slice(&buf, leaves_len);
+
+    leaves.sync();
 }

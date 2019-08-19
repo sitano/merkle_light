@@ -3,10 +3,10 @@ cache: cargo
 
 rust:
   - stable
-  - nightly-2019-02-26
+  - nightly-2019-08-09
 
 before_script:
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly-2019-02-26" ]]; then
+  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly-2019-08-09" ]]; then
      rustup component add clippy-preview;
     fi'
 
@@ -17,5 +17,5 @@ script:
   - cargo build --all-features
   - cargo test --all-features
   - cargo doc --all-features --no-deps
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly-2019-02-26" ]]; then cargo clippy --all -- -D warnings; fi'
-  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly-2019-02-26" ]]; then cargo build --benches --all-features --all --release; fi'
+  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly-2019-08-09" ]]; then cargo clippy --all -- -D warnings; fi'
+  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "nightly-2019-08-09" ]]; then cargo build --benches --all-features --all --release; fi'
