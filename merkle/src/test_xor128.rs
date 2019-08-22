@@ -1,12 +1,14 @@
 #![cfg(test)]
 
 use hash::*;
+use merkle::FromIndexedParallelIterator;
 use merkle::{log2_pow2, next_pow2};
 use merkle::{DiskStore, Element, MerkleTree, MmapStore, VecStore, SMALL_TREE_BUILD};
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-use tempfile;
 
 const SIZE: usize = 0x10;
 
@@ -312,76 +314,6 @@ fn test_simple_tree() {
                 assert!(p.validate::<XOR128>());
             }
         }
-
-        {
-            let temp_dir = tempfile::tempdir().unwrap();
-            // Hold on to the directory to avoid losing the created file-mmap inside.
-
-            let disk_leaves: DiskStore<[u8; 16]> = DiskStore::new_with_path(
-                next_pow2(leafs.len()),
-                &temp_dir.path().to_owned().join("test-xor-128-disk-leaves"),
-            );
-
-            let disk_top_half: DiskStore<[u8; 16]> = DiskStore::new_with_path(
-                next_pow2(leafs.len()) - 1,
-                &temp_dir
-                    .path()
-                    .to_owned()
-                    .join("test-xor-128-disk-top-half"),
-            );
-
-            let mt3: MerkleTree<_, XOR128, DiskStore<_>> = MerkleTree::from_data_with_store(
-                leafs.chunks_exact(16).map(|chunk| {
-                    let mut array: [u8; 16] = Default::default();
-                    array.copy_from_slice(chunk);
-                    array
-                }),
-                disk_leaves,
-                disk_top_half,
-            );
-
-            assert_eq!(mt3.leafs(), items);
-            assert_eq!(mt3.height(), log2_pow2(next_pow2(mt3.len())));
-            for i in 0..mt3.leafs() {
-                let p = mt3.gen_proof(i);
-                assert!(p.validate::<XOR128>());
-            }
-        }
-
-        {
-            let temp_dir = tempfile::tempdir().unwrap();
-            // Hold on to the directory to avoid losing the created file-mmap inside.
-
-            let disk_leaves: DiskStore<[u8; 16]> = DiskStore::new_with_path(
-                next_pow2(leafs.len()),
-                &temp_dir.path().to_owned().join("test-xor-128-disk-leaves"),
-            );
-
-            let disk_top_half: DiskStore<[u8; 16]> = DiskStore::new_with_path(
-                next_pow2(leafs.len()) - 1,
-                &temp_dir
-                    .path()
-                    .to_owned()
-                    .join("test-xor-128-disk-top-half"),
-            );
-
-            let mt3: MerkleTree<_, XOR128, DiskStore<_>> = MerkleTree::from_data_with_store(
-                leafs.chunks_exact(16).map(|chunk| {
-                    let mut array: [u8; 16] = Default::default();
-                    array.copy_from_slice(chunk);
-                    array
-                }),
-                disk_leaves,
-                disk_top_half,
-            );
-
-            assert_eq!(mt3.leafs(), items);
-            assert_eq!(mt3.height(), log2_pow2(next_pow2(mt3.len())));
-            for i in 0..mt3.leafs() {
-                let p = mt3.gen_proof(i);
-                assert!(p.validate::<XOR128>());
-            }
-        }
     }
 }
 
@@ -415,11 +347,12 @@ fn test_large_tree() {
         assert_eq!(mt_mmap.len(), 2 * count - 1);
 
         let mt_disk: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
-            MerkleTree::from_iter((0..count).map(|x| {
-                a.reset();
-                x.hash(&mut a);
-                i.hash(&mut a);
-                a.hash()
+            MerkleTree::from_par_iter((0..count).into_par_iter().map(|x| {
+                let mut xor_128 = a.clone();
+                xor_128.reset();
+                x.hash(&mut xor_128);
+                i.hash(&mut xor_128);
+                xor_128.hash()
             }));
         assert_eq!(mt_disk.len(), 2 * count - 1);
     }

@@ -5,11 +5,9 @@ use positioned_io::{ReadAt, WriteAt};
 use proof::Proof;
 use rayon::prelude::*;
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::ops::{self, Index};
-use std::path::Path;
 use std::sync::{Arc, RwLock};
 use tempfile::tempfile;
 
@@ -451,27 +449,6 @@ impl<E: Element> Store<E> for DiskStore<E> {
 }
 
 impl<E: Element> DiskStore<E> {
-    #[allow(unsafe_code)]
-    // FIXME: Return errors on failure instead of panicking
-    //  (see https://github.com/filecoin-project/merkle_light/issues/19).
-    pub fn new_with_path(size: usize, path: &Path) -> Self {
-        let byte_len = E::byte_len() * size;
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(&path)
-            .expect("cannot create file");
-        file.set_len(byte_len as u64).unwrap();
-
-        DiskStore {
-            len: 0,
-            _e: Default::default(),
-            file,
-            store_size: byte_len,
-        }
-    }
-
     pub fn store_size(&self) -> usize {
         self.store_size
     }
@@ -528,30 +505,6 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
             x.hash(&mut a);
             a.hash()
         }))
-    }
-
-    /// Creates new merkle from an already allocated `Store` (used with
-    /// `DiskStore::new_with_path` to set its path before instantiating
-    /// the MT, which would otherwise just call `DiskStore::new`).
-    // FIXME: Taken from `MerkleTree::from_iter` to avoid adding more complexity,
-    //  it should receive a `parallel` flag to decide what to do.
-    // FIXME: We're repeating too much code here, `from_iter` (and
-    //  `from_par_iter`) should be extended to handled a pre-allocated `Store`.
-    pub fn from_data_with_store<I: IntoIterator<Item = T>>(
-        into: I,
-        mut leaves: K,
-        top_half: K,
-    ) -> MerkleTree<T, A, K> {
-        let iter = into.into_iter();
-
-        let leafs = iter.size_hint().1.unwrap();
-        assert!(leafs > 1);
-
-        let pow = next_pow2(leafs);
-
-        populate_leaves::<T, A, K, I>(&mut leaves, iter);
-
-        Self::build(leaves, top_half, leafs, log2_pow2(2 * pow))
     }
 
     #[inline]
@@ -903,9 +856,25 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     }
 }
 
-impl<T: Element, A: Algorithm<T>, K: Store<T>> FromParallelIterator<T> for MerkleTree<T, A, K> {
+pub trait FromIndexedParallelIterator<T>
+where
+    T: Send,
+{
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where
+        I: IntoParallelIterator<Item = T>,
+        I::Iter: IndexedParallelIterator;
+}
+
+impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
+    for MerkleTree<T, A, K>
+{
     /// Creates new merkle tree from an iterator over hashable objects.
-    fn from_par_iter<I: IntoParallelIterator<Item = T>>(into: I) -> Self {
+    fn from_par_iter<I>(into: I) -> Self
+    where
+        I: IntoParallelIterator<Item = T>,
+        I::Iter: IndexedParallelIterator,
+    {
         let iter = into.into_par_iter();
 
         let leafs = iter.opt_len().expect("must be sized");
@@ -914,22 +883,8 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromParallelIterator<T> for Merkl
         let mut leaves = K::new(pow);
         let top_half = K::new(pow);
 
-        // leafs
-        let vs = iter
-            .map(|item| {
-                let mut a = A::default();
-                a.leaf(item)
-            })
-            .collect::<Vec<_>>();
+        populate_leaves_par::<T, A, K, _>(&mut leaves, iter);
 
-        for v in vs.into_iter() {
-            leaves.push(v);
-        }
-        leaves.sync();
-        // FIXME: Use a similar construction to `populate_leaves`
-        // for parallel threads.
-
-        assert!(leafs > 1);
         Self::build(leaves, top_half, leafs, log2_pow2(2 * pow))
     }
 }
@@ -1013,4 +968,33 @@ fn populate_leaves<T: Element, A: Algorithm<T>, K: Store<T>, I: IntoIterator<Ite
     leaves.copy_from_slice(&buf, leaves_len);
 
     leaves.sync();
+}
+
+// FIXME: Copied from `populate_leaves`, can we unify the code?
+fn populate_leaves_par<T, A, K, I>(leaves: &mut K, iter: I)
+where
+    T: Element,
+    A: Algorithm<T>,
+    K: Store<T>,
+    I: ParallelIterator<Item = T> + IndexedParallelIterator,
+{
+    let store = Arc::new(RwLock::new(leaves));
+
+    iter.chunks(BUILD_LEAVES_BLOCK_SIZE)
+        .enumerate()
+        .for_each(|(index, chunk)| {
+            let mut a = A::default();
+            let mut buf = Vec::with_capacity(BUILD_LEAVES_BLOCK_SIZE * T::byte_len());
+
+            for item in chunk {
+                a.reset();
+                buf.extend(a.leaf(item).as_ref());
+            }
+            store
+                .write()
+                .unwrap()
+                .copy_from_slice(&buf[..], BUILD_LEAVES_BLOCK_SIZE * index)
+        });
+
+    store.write().unwrap().sync();
 }
