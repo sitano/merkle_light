@@ -1,3 +1,4 @@
+use failure::Error;
 use merkle::Element;
 use memmap::MmapMut;
 use memmap::MmapOptions;
@@ -7,15 +8,16 @@ use std::marker::PhantomData;
 use std::ops::{self, Index};
 use tempfile::tempfile;
 
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// Backing store of the merkle tree.
 pub trait Store<E: Element>:
     ops::Deref<Target = [E]> + std::fmt::Debug + Clone + Send + Sync
 {
     /// Creates a new store which can store up to `size` elements.
-    fn new(size: usize) -> Result<Self, &'static str>;
+    fn new(size: usize) -> Result<Self>;
 
-    fn new_from_slice(size: usize, data: &[u8]) -> Result<Self, &'static str>;
+    fn new_from_slice(size: usize, data: &[u8]) -> Result<Self>;
 
     fn write_at(&mut self, el: E, index: usize);
 
@@ -50,7 +52,7 @@ impl<E: Element> ops::Deref for VecStore<E> {
 }
 
 impl<E: Element> Store<E> for VecStore<E> {
-    fn new(size: usize) -> Result<Self, &'static str> {
+    fn new(size: usize) -> Result<Self> {
         Ok(VecStore(Vec::with_capacity(size)))
     }
 
@@ -81,7 +83,7 @@ impl<E: Element> Store<E> for VecStore<E> {
         );
     }
 
-    fn new_from_slice(size: usize, data: &[u8]) -> Result<Self, &'static str> {
+    fn new_from_slice(size: usize, data: &[u8]) -> Result<Self> {
         let mut v: Vec<_> = data
             .chunks_exact(E::byte_len())
             .map(E::from_slice)
@@ -135,7 +137,7 @@ impl<E: Element> ops::Deref for MmapStore<E> {
 
 impl<E: Element> Store<E> for MmapStore<E> {
     #[allow(unsafe_code)]
-    fn new(size: usize) -> Result<Self, &'static str> {
+    fn new(size: usize) -> Result<Self> {
         let byte_len = E::byte_len();
 
         let mapped = MmapOptions::new()
@@ -151,7 +153,7 @@ impl<E: Element> Store<E> for MmapStore<E> {
         })
     }
 
-    fn new_from_slice(size: usize, data: &[u8]) -> Result<Self, &'static str> {
+    fn new_from_slice(size: usize, data: &[u8]) -> Result<Self> {
         assert_eq!(data.len() % E::byte_len(), 0);
 
         let mut res = Self::new(size)?;
@@ -265,7 +267,7 @@ impl<E: Element> ops::Deref for DiskStore<E> {
 
 impl<E: Element> Store<E> for DiskStore<E> {
     #[allow(unsafe_code)]
-    fn new(size: usize) -> Result<Self, &'static str> {
+    fn new(size: usize) -> Result<Self> {
         let store_size = E::byte_len() * size;
         let file = tempfile().expect("couldn't create temp file");
         file.set_len(store_size as u64)
@@ -280,7 +282,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
         })
     }
 
-    fn new_from_slice(size: usize, data: &[u8]) -> Result<Self, &'static str> {
+    fn new_from_slice(size: usize, data: &[u8]) -> Result<Self> {
         assert_eq!(data.len() % E::byte_len(), 0);
 
         let mut res = Self::new(size)?;
