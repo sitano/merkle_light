@@ -1,7 +1,9 @@
 [package]
 name = "merkletree"
-version = "0.10.0"
+version = "0.10.1"
 authors = [
+  "nemo <nemo@protocol.ai>",
+  "schomatis",
   "Ivan Prisyazhnyy <john.koepi@gmail.com>"
 ]
 

@@ -129,7 +129,8 @@
 //! #[cfg(feature = "chaincore")]
 //! {
 //!     use example::ExampleAlgorithm;
-//!     use merkletree::merkle::{MerkleTree,VecStore};
+//!     use merkletree::merkle::MerkleTree;
+//!     use merkletree::store::VecStore;
 //!     use std::iter::FromIterator;
 //!
 //!     let mut h1 = [0u8; 32];
@@ -172,7 +173,10 @@ pub mod hash;
 /// Common implementations for [`Hashable`].
 mod hash_impl;
 
-/// Merkle tree inclusion proof
+/// Store implementations.
+pub mod store;
+
+/// Merkle tree inclusion proof.
 pub mod proof;
 
 /// Merkle tree abstractions, implementation and algorithms.
@@ -193,7 +197,7 @@ mod test_xor128;
 #[cfg(test)]
 mod test_sip;
 
-/// Tests for Merkle Hasher Customization
+/// Tests for Merkle Hasher Customization.
 #[cfg(test)]
 mod test_cmh;
 
