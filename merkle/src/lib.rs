@@ -79,7 +79,6 @@
 //! mod example {
 //!     use std::fmt;
 //!     use std::hash::Hasher;
-//!     use std::iter::FromIterator;
 //!     use crypto::sha3::{Sha3, Sha3Mode};
 //!     use crypto::digest::Digest;
 //!     use merkletree::hash::{Algorithm, Hashable};
@@ -165,9 +164,13 @@ extern crate rayon;
 
 extern crate memmap;
 
+extern crate tempdir;
+
 extern crate tempfile;
 
 extern crate positioned_io;
+
+extern crate serde;
 
 /// Hash infrastructure for items in Merkle tree.
 pub mod hash;

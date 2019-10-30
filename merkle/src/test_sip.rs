@@ -106,7 +106,7 @@ fn test_simple_tree() {
                     x.hash(&mut a);
                     a.hash()
                 })
-                .take(items),
+                .take(items)
         );
 
         assert_eq!(mt.leafs(), items);
