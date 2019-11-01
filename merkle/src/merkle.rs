@@ -131,40 +131,17 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     }
 
     /// Creates new merkle tree from an already allocated `Store`
-    /// (used with `DiskStore::new_from_disk`.
+    /// (used with `*Store::new_from_disk`).
     pub fn from_data_store(data: K, leafs: usize) -> MerkleTree<T, A, K> {
         let pow = next_pow2(leafs);
         let height = log2_pow2(2 * pow);
 
-        let elements = data.len() / T::byte_len();
-        let root = data.read_at(elements - 1);
+        let elements = data.len() / 2 + 1;
+        let root = data.read_at(data.len() - 1);
 
         MerkleTree {
             data,
-            leafs,
-            height,
-            root,
-            _a: PhantomData,
-            _t: PhantomData,
-        }
-    }
-
-    /// Creates new merkle from an already allocated and compacted
-    /// 'Store' (used with 'LevelCacheStore::new_from_disk').  For
-    /// now, the config isn't actually used, since it was already
-    /// required for the LevelCacheStore::new_from_disk call.
-    /// Depending, it may be needed here later though, so it's here
-    /// for now.
-    pub fn from_data_store_with_config(data: K, leafs: usize, _config: StoreConfig) -> MerkleTree<T, A, K> {
-        let pow = next_pow2(leafs);
-        let height = log2_pow2(2 * pow);
-
-        let elements = data.len();
-        let root = data.read_at(elements - 1);
-
-        MerkleTree {
-            data,
-            leafs,
+            leafs: elements,
             height,
             root,
             _a: PhantomData,
@@ -173,6 +150,22 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     }
 
     fn build(data: K, leafs: usize, height: usize) -> Self {
+        // If the incoming is likely already the fully built data, use
+        // it instead of rebuilding the data.  This is the normal case
+        // for DiskStore::new_from_disk, which can re-use MTs and
+        // doesn't need to rebuild anything.
+        if data.len() == 2 * leafs - 1 {
+            let root = { data.read_at(data.len() - 1) };
+            return MerkleTree {
+                data,
+                leafs,
+                height,
+                root,
+                _a: PhantomData,
+                _t: PhantomData,
+            };
+        }
+
         if leafs <= SMALL_TREE_BUILD {
             return Self::build_small_tree(data, leafs, height);
         }
@@ -777,7 +770,14 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
 
         let mut data = K::new_with_config(2 * pow - 1, config)
             .expect("Failed to create data store");
-        populate_data_par::<T, A, K, _>(&mut data, iter);
+
+        // If the data store is empty, populate the base layer before
+        // building the tree.  If it's not empty, it likely already
+        // contains the built tree (as in the case where new_from_disk
+        // was invoked).
+        if !data.loaded_from_disk() {
+            populate_data_par::<T, A, K, _>(&mut data, iter);
+        }
 
         Self::build(data, leafs, log2_pow2(2 * pow))
     }
@@ -811,7 +811,14 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIteratorWithConfig<T> for Mer
         let pow = next_pow2(leafs);
         let mut data = K::new_with_config(2 * pow - 1, config)
             .expect("Failed to create data store");
-        populate_data::<T, A, K, I>(&mut data, iter);
+
+        // If the data store is empty, populate the base layer before
+        // building the tree.  If it's not empty, it likely already
+        // contains the built tree (as in the case where new_from_disk
+        // was invoked).
+        if !data.loaded_from_disk() {
+            populate_data::<T, A, K, I>(&mut data, iter);
+        }
 
         Self::build(data, leafs, log2_pow2(2 * pow))
     }
