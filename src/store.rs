@@ -233,22 +233,22 @@ impl<E: Element> Store<E> for DiskStore<E> {
         }
 
         // Otherwise, create the file and allow it to be the on-disk store.
-        let data = OpenOptions::new()
+        let file = OpenOptions::new()
             .write(true)
             .read(true)
             .create_new(true)
             .open(data_path)?;
 
-        let base_size = E::byte_len() * size;
-        data.set_len(base_size as u64)?;
+        let store_size = E::byte_len() * size;
+        file.set_len(store_size as u64)?;
 
         Ok(DiskStore {
             len: 0,
             elem_len: E::byte_len(),
             _e: Default::default(),
-            file: data,
+            file,
             loaded_from_disk: false,
-            store_size: base_size,
+            store_size,
         })
     }
 
@@ -269,6 +269,8 @@ impl<E: Element> Store<E> for DiskStore<E> {
     }
 
     fn new_from_slice_with_config(size: usize, data: &[u8], config: StoreConfig) -> Result<Self> {
+        assert_eq!(data.len() % E::byte_len(), 0);
+
         let mut store = Self::new_with_config(size, config)?;
         store.store_copy_from_slice(0, data);
         store.len = data.len() / store.elem_len;
@@ -289,8 +291,8 @@ impl<E: Element> Store<E> for DiskStore<E> {
     fn new_from_disk(size: usize, config: StoreConfig) -> Result<Self> {
         let data_path = StoreConfig::data_path(&config.path, &config.id);
 
-        let data = File::open(&data_path)?;
-        let metadata = data.metadata()?;
+        let file = File::open(&data_path)?;
+        let metadata = file.metadata()?;
         let store_size = metadata.len() as usize;
 
         // Sanity check.
@@ -300,7 +302,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
             len: size,
             elem_len: E::byte_len(),
             _e: Default::default(),
-            file: data,
+            file,
             loaded_from_disk: true,
             store_size,
         })
