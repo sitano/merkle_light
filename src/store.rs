@@ -272,8 +272,15 @@ impl<E: Element> Store<E> for DiskStore<E> {
         assert_eq!(data.len() % E::byte_len(), 0);
 
         let mut store = Self::new_with_config(size, config)?;
-        store.store_copy_from_slice(0, data);
-        store.len = data.len() / store.elem_len;
+
+        // If the store was loaded from disk (based on the config
+        // information, avoid re-populating the store at this point
+        // since it can be assumed by the config that the data is
+        // already correct).
+        if !store.loaded_from_disk {
+            store.store_copy_from_slice(0, data);
+            store.len = data.len() / store.elem_len;
+        }
 
         Ok(store)
     }
