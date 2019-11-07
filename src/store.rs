@@ -1,5 +1,5 @@
 use failure::{err_msg, Error};
-use merkle::{next_pow2, Element};
+use merkle::{next_pow2, get_merkle_tree_leafs, Element};
 use positioned_io::{ReadAt, WriteAt};
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
@@ -386,7 +386,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
     // access using LevelCacheStore::new_from_disk.
     fn compact(&mut self, config: StoreConfig) -> Result<bool> {
         // Determine how many leafs there are (in bytes).
-        let data_width = (self.len / 2 + 1) * self.elem_len;
+        let data_width = get_merkle_tree_leafs(self.len) * self.elem_len;
 
         // Calculate how large the cache should be (based on the
         // config.levels param).
@@ -582,22 +582,24 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         unimplemented!("LevelCacheStore requires a StoreConfig");
     }
 
-    fn new_from_disk(size: usize, config: StoreConfig) -> Result<Self> {
+    fn new_from_disk(store_range: usize, config: StoreConfig) -> Result<Self> {
         let data_path = StoreConfig::data_path(&config.path, &config.id);
 
-        let data = File::open(data_path)?;
-        let metadata = data.metadata()?;
+        let file = File::open(data_path)?;
+        let metadata = file.metadata()?;
         let store_size = metadata.len() as usize;
 
         // The LevelCacheStore base data layer must already be a
         // massaged next pow2 (guaranteed if created with
         // DiskStore::compact, which is the only supported method at
         // the moment).
+        let size = get_merkle_tree_leafs(store_range);
         assert_eq!(size, next_pow2(size));
 
         // Values below in bytes.
+        // Convert store_range from an element count to bytes.
+        let store_range = store_range * E::byte_len();
         let data_len = size * E::byte_len();
-        let store_range = 2 * data_len - 1;
 
         // Calculate cache start and the updated size with repect to
         // the data size.
@@ -613,7 +615,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         Ok(LevelCacheStore {
             len: store_range / E::byte_len(),
             elem_len: E::byte_len(),
-            file: data,
+            file,
             data_width: size,
             cache_index_start,
             store_size,
@@ -731,9 +733,7 @@ impl<E: Element> LevelCacheStore<E> {
         // Adjust read index if in the cached ranged to be shifted
         // over since the data stored is compacted.
         if start >= self.cache_index_start {
-            adjusted_start =
-                start - self.cache_index_start + (self.data_width * self.elem_len) + E::byte_len()
-                    - 1;
+            adjusted_start = start - self.cache_index_start + (self.data_width * self.elem_len);
         }
 
         assert_eq!(

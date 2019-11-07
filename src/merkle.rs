@@ -139,22 +139,17 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         )
     }
 
-    /// Creates new merkle tree from an already allocated `Store`
-    /// (used with `*Store::new_from_disk`).
+    /// Creates new merkle tree from an already allocated 'Store'
+    /// (used with 'Store::new_from_disk').  The specified 'size' is
+    /// the number of base data leafs in the MT.
     pub fn from_data_store(data: K, size: usize) -> MerkleTree<T, A, K> {
         let pow = next_pow2(size);
         let height = log2_pow2(2 * pow);
         let root = data.read_at(data.len() - 1);
 
-        // This method assumes the entire tree is stored (either
-        // logically or virtually depending on the store), so it's
-        // expected that the on-disk size may not match the actual
-        // number of tree leaves.
-        let leafs = get_merkle_tree_leafs(size);
-
         MerkleTree {
             data,
-            leafs,
+            leafs: size,
             height,
             root,
             _a: PhantomData,
@@ -848,7 +843,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIteratorWithConfig<T> for Mer
         }
 
         populate_data::<T, A, K, I>(&mut data, iter);
-        Self::build(data, leafs, log2_pow2(2 * pow))
+        Self::build(data, leafs, height)
     }
 }
 
