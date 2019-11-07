@@ -627,6 +627,12 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         self.data.compact(config)
     }
 
+    /// Removes the backing store for this merkle tree.
+    #[inline]
+    pub fn delete(&self, config: StoreConfig) -> Result<bool> {
+        K::delete(config)
+    }
+
     /// Returns `true` if the vector contains no elements.
     #[inline]
     pub fn is_empty(&self) -> bool {

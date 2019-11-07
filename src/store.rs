@@ -2,7 +2,7 @@ use failure::{err_msg, Error};
 use merkle::{next_pow2, get_merkle_tree_leafs, Element};
 use positioned_io::{ReadAt, WriteAt};
 use serde::{Deserialize, Serialize};
-use std::fs::{File, OpenOptions};
+use std::fs::{remove_file, File, OpenOptions};
 use std::io::{copy, Seek, SeekFrom};
 use std::marker::PhantomData;
 use std::ops::{self, Index};
@@ -73,6 +73,12 @@ pub trait Store<E: Element>:
     // position in `E` sizes (*not* in `u8`).
     fn copy_from_slice(&mut self, buf: &[u8], start: usize);
     fn compact(&mut self, config: StoreConfig) -> Result<bool>;
+
+    // Removes the store backing (does not require a mutable reference
+    // since the config should provide stateless context to what's
+    // needed to be removed -- with the exception of in memory stores,
+    // where this is arguably not important/needed).
+    fn delete(config: StoreConfig) -> Result<bool>;
 
     fn read_at(&self, index: usize) -> E;
     fn read_range(&self, r: ops::Range<usize>) -> Vec<E>;
@@ -182,6 +188,10 @@ impl<E: Element> Store<E> for VecStore<E> {
     fn compact(&mut self, _config: StoreConfig) -> Result<bool> {
         self.0.shrink_to_fit();
 
+        Ok(true)
+    }
+
+    fn delete(_config: StoreConfig) -> Result<bool> {
         Ok(true)
     }
 
@@ -434,6 +444,12 @@ impl<E: Element> Store<E> for DiskStore<E> {
         Ok(true)
     }
 
+    fn delete(config: StoreConfig) -> Result<bool> {
+        remove_file(StoreConfig::data_path(&config.path, &config.id))?;
+
+        Ok(true)
+    }
+
     fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -520,9 +536,9 @@ impl<E: Element> Clone for DiskStore<E> {
 /// and can only be accessed with the same number of levels.
 ///
 /// NOTE: Unlike other store types, writes of any kind are not
-/// supported since we're accessing specially crafted on-disk data
-/// that requires a particular access pattern dictated at the time of
-/// creation/compaction.
+/// supported (except deletion) since we're accessing specially
+/// crafted on-disk data that requires a particular access pattern
+/// dictated at the time of creation/compaction.
 #[derive(Debug)]
 pub struct LevelCacheStore<E: Element> {
     len: usize,
@@ -692,6 +708,12 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
 
     fn compact(&mut self, _config: StoreConfig) -> Result<bool> {
         Err(err_msg("Cannot compact this type of Store"))
+    }
+
+    fn delete(config: StoreConfig) -> Result<bool> {
+        remove_file(StoreConfig::data_path(&config.path, &config.id))?;
+
+        Ok(true)
     }
 
     fn is_empty(&self) -> bool {
