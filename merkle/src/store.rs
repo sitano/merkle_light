@@ -1,12 +1,12 @@
-use failure::{Error, err_msg};
-use merkle::{Element, next_pow2};
+use failure::{err_msg, Error};
+use merkle::{next_pow2, Element};
 use positioned_io::{ReadAt, WriteAt};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Seek, SeekFrom};
-use std::path::{Path, PathBuf};
 use std::marker::PhantomData;
 use std::ops::{self, Index};
+use std::path::{Path, PathBuf};
 use tempfile::tempfile;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -38,18 +38,19 @@ impl StoreConfig {
             path: PathBuf::from(path),
             id,
             size: None,
-            levels
+            levels,
         }
     }
 
     // Deterministically create the data_path on-disk location from a
     // path and specified id.
     pub fn data_path(path: &PathBuf, id: &str) -> PathBuf {
-        Path::new(&path).join(
-            format!("sc-{:0>2}-data-{}.dat", STORE_CONFIG_DATA_VERSION, id))
+        Path::new(&path).join(format!(
+            "sc-{:0>2}-data-{}.dat",
+            STORE_CONFIG_DATA_VERSION, id
+        ))
     }
 }
-
 
 /// Backing store of the merkle tree.
 pub trait Store<E: Element>:
@@ -224,8 +225,7 @@ impl<E: Element> ops::Deref for DiskStore<E> {
 
 impl<E: Element> Store<E> for DiskStore<E> {
     fn new_with_config(size: usize, config: StoreConfig) -> Result<Self> {
-        let data_path = StoreConfig::data_path(
-            &config.path, &config.id);
+        let data_path = StoreConfig::data_path(&config.path, &config.id);
 
         // If the specified file exists, load it from disk.
         if Path::new(&data_path).exists() {
@@ -477,7 +477,8 @@ impl<E: Element> DiskStore<E> {
                 .read_at(start as u64, buf)
                 .unwrap_or_else(|_| panic!(
                     "failed to read {} bytes from file at offset {}",
-                    end - start, start
+                    end - start,
+                    start
                 )),
             end - start
         );
@@ -499,7 +500,6 @@ impl<E: Element> Clone for DiskStore<E> {
         unimplemented!("We can't clone a store with an already associated file");
     }
 }
-
 
 /// The LevelCacheStore is used to reduce the on-disk footprint even
 /// further to the minimum at the cost of build time performance.
@@ -530,7 +530,7 @@ pub struct LevelCacheStore<E: Element> {
     // unnecessarily.
     store_size: usize,
 
-    _e: PhantomData<E>
+    _e: PhantomData<E>,
 }
 
 impl<E: Element> ops::Deref for LevelCacheStore<E> {
@@ -543,8 +543,7 @@ impl<E: Element> ops::Deref for LevelCacheStore<E> {
 
 impl<E: Element> Store<E> for LevelCacheStore<E> {
     fn new_with_config(size: usize, config: StoreConfig) -> Result<Self> {
-        let data_path = StoreConfig::data_path(
-            &config.path, &config.id);
+        let data_path = StoreConfig::data_path(&config.path, &config.id);
 
         // If the specified file exists, load it from disk.  This is
         // the only supported usage of this call for this type of
@@ -553,14 +552,20 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
             return Self::new_from_disk(size, config);
         }
 
-        Err(err_msg("Cannot create a LevelCacheStore in this way. Try DiskStore::compact"))
+        Err(err_msg(
+            "Cannot create a LevelCacheStore in this way. Try DiskStore::compact",
+        ))
     }
 
     fn new(_size: usize) -> Result<Self> {
         unimplemented!("LevelCacheStore requires a StoreConfig");
     }
 
-    fn new_from_slice_with_config(_size: usize, _data: &[u8], _config: StoreConfig) -> Result<Self> {
+    fn new_from_slice_with_config(
+        _size: usize,
+        _data: &[u8],
+        _config: StoreConfig,
+    ) -> Result<Self> {
         unimplemented!("Cannot create a LevelCacheStore in this way. Try 'new_from_disk'.");
     }
 
@@ -603,7 +608,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
             data_width: size,
             cache_index_start,
             store_size,
-            _e: Default::default()
+            _e: Default::default(),
         })
     }
 
@@ -622,8 +627,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         let len = self.len * self.elem_len;
         assert!(start < len, "start out of range {} >= {}", start, len);
         assert!(end <= len, "end out of range {} > {}", end, len);
-        assert!(start <= self.data_width * self.elem_len ||
-                start >= self.cache_index_start);
+        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
 
         E::from_slice(&self.store_read_range(start, end))
     }
@@ -635,8 +639,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         let len = self.len * self.elem_len;
         assert!(start < len, "start out of range {} >= {}", start, len);
         assert!(end <= len, "end out of range {} > {}", end, len);
-        assert!(start <= self.data_width * self.elem_len ||
-                start >= self.cache_index_start);
+        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
 
         self.store_read_into(start, end, buf);
     }
@@ -648,8 +651,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         let len = self.len * self.elem_len;
         assert!(start < len, "start out of range {} >= {}", start, len);
         assert!(end <= len, "end out of range {} > {}", end, len);
-        assert!(start <= self.data_width * self.elem_len ||
-                start >= self.cache_index_start);
+        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
 
         self.store_read_into(start, end, buf);
     }
@@ -661,8 +663,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         let len = self.len * self.elem_len;
         assert!(start < len, "start out of range {} >= {}", start, len);
         assert!(end <= len, "end out of range {} > {}", end, len);
-        assert!(start <= self.data_width * self.elem_len ||
-                start >= self.cache_index_start);
+        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
 
         self.store_read_range(start, end)
             .chunks(self.elem_len)
@@ -716,14 +717,14 @@ impl<E: Element> LevelCacheStore<E> {
         let mut read_data = vec![0; read_len];
         let mut adjusted_start = start;
 
-        assert!(start <= self.data_width * self.elem_len ||
-                start >= self.cache_index_start);
+        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
 
         // Adjust read index if in the cached ranged to be shifted
         // over since the data stored is compacted.
         if start >= self.cache_index_start {
-            adjusted_start = start - self.cache_index_start +
-                (self.data_width * self.elem_len) + E::byte_len() - 1;
+            adjusted_start =
+                start - self.cache_index_start + (self.data_width * self.elem_len) + E::byte_len()
+                    - 1;
         }
 
         assert_eq!(
@@ -745,7 +746,8 @@ impl<E: Element> LevelCacheStore<E> {
                 .read_at(start as u64, buf)
                 .unwrap_or_else(|_| panic!(
                     "failed to read {} bytes from file at offset {}",
-                    end - start, start
+                    end - start,
+                    start
                 )),
             end - start
         );
@@ -764,3 +766,198 @@ impl<E: Element> Clone for LevelCacheStore<E> {
         unimplemented!("We can't clone a store with an already associated file");
     }
 }
+
+use rayon::iter::plumbing::*;
+use rayon::iter::*;
+
+// Using a macro as it is not possible to do a generic implementation for all stores.
+
+macro_rules! impl_parallel_iter {
+    ($name:ident, $producer:ident, $iter:ident) => {
+        impl<E: Element> ParallelIterator for $name<E> {
+            type Item = E;
+
+            fn drive_unindexed<C>(self, consumer: C) -> C::Result
+            where
+                C: UnindexedConsumer<Self::Item>,
+            {
+                bridge(self, consumer)
+            }
+
+            fn opt_len(&self) -> Option<usize> {
+                Some(Store::len(self))
+            }
+        }
+        impl<'a, E: Element> ParallelIterator for &'a $name<E> {
+            type Item = E;
+
+            fn drive_unindexed<C>(self, consumer: C) -> C::Result
+            where
+                C: UnindexedConsumer<Self::Item>,
+            {
+                bridge(self, consumer)
+            }
+
+            fn opt_len(&self) -> Option<usize> {
+                Some(Store::len(*self))
+            }
+        }
+
+        impl<E: Element> IndexedParallelIterator for $name<E> {
+            fn drive<C>(self, consumer: C) -> C::Result
+            where
+                C: Consumer<Self::Item>,
+            {
+                bridge(self, consumer)
+            }
+
+            fn len(&self) -> usize {
+                Store::len(self)
+            }
+
+            fn with_producer<CB>(self, callback: CB) -> CB::Output
+            where
+                CB: ProducerCallback<Self::Item>,
+            {
+                callback.callback(<$producer<E>>::new(0, Store::len(&self), &self))
+            }
+        }
+
+        impl<'a, E: Element> IndexedParallelIterator for &'a $name<E> {
+            fn drive<C>(self, consumer: C) -> C::Result
+            where
+                C: Consumer<Self::Item>,
+            {
+                bridge(self, consumer)
+            }
+
+            fn len(&self) -> usize {
+                Store::len(*self)
+            }
+
+            fn with_producer<CB>(self, callback: CB) -> CB::Output
+            where
+                CB: ProducerCallback<Self::Item>,
+            {
+                callback.callback(<$producer<E>>::new(0, Store::len(self), self))
+            }
+        }
+
+        #[derive(Debug, Clone)]
+        pub struct $producer<'data, E: 'data + Element> {
+            pub(crate) current: usize,
+            pub(crate) end: usize,
+            pub(crate) store: &'data $name<E>,
+        }
+
+        impl<'data, E: 'data + Element> $producer<'data, E> {
+            pub fn new(current: usize, end: usize, store: &'data $name<E>) -> Self {
+                Self {
+                    current,
+                    end,
+                    store,
+                }
+            }
+
+            pub fn len(&self) -> usize {
+                self.end - self.current
+            }
+
+            pub fn is_empty(&self) -> bool {
+                self.len() == 0
+            }
+        }
+
+        impl<'data, E: 'data + Element> Producer for $producer<'data, E> {
+            type Item = E;
+            type IntoIter = $iter<'data, E>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                let $producer {
+                    current,
+                    end,
+                    store,
+                } = self;
+
+                $iter {
+                    current,
+                    end,
+                    store,
+                }
+            }
+
+            fn split_at(self, index: usize) -> (Self, Self) {
+                let len = self.len();
+
+                if len == 0 {
+                    return (
+                        <$producer<E>>::new(0, 0, &self.store),
+                        <$producer<E>>::new(0, 0, &self.store),
+                    );
+                }
+
+                let current = self.current;
+                let first_end = current + std::cmp::min(len, index);
+
+                debug_assert!(first_end >= current);
+                debug_assert!(current + len >= first_end);
+
+                (
+                    <$producer<E>>::new(current, first_end, &self.store),
+                    <$producer<E>>::new(first_end, current + len, &self.store),
+                )
+            }
+        }
+        #[derive(Debug)]
+        pub struct $iter<'data, E: 'data + Element> {
+            current: usize,
+            end: usize,
+            store: &'data $name<E>,
+        }
+
+        impl<'data, E: 'data + Element> $iter<'data, E> {
+            fn is_done(&self) -> bool {
+                self.len() == 0
+            }
+        }
+
+        impl<'data, E: 'data + Element> Iterator for $iter<'data, E> {
+            type Item = E;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                if self.is_done() {
+                    return None;
+                }
+
+                let el = self.store.read_at(self.current);
+                self.current += 1;
+
+                Some(el)
+            }
+        }
+
+        impl<'data, E: 'data + Element> ExactSizeIterator for $iter<'data, E> {
+            fn len(&self) -> usize {
+                debug_assert!(self.current <= self.end);
+                self.end - self.current
+            }
+        }
+
+        impl<'data, E: 'data + Element> DoubleEndedIterator for $iter<'data, E> {
+            fn next_back(&mut self) -> Option<Self::Item> {
+                if self.is_done() {
+                    return None;
+                }
+
+                let el = self.store.read_at(self.end - 1);
+                self.end -= 1;
+
+                Some(el)
+            }
+        }
+    };
+}
+
+impl_parallel_iter!(VecStore, VecStoreProducer, VecStoreIter);
+impl_parallel_iter!(DiskStore, DiskStoreProducer, DiskIter);
+impl_parallel_iter!(LevelCacheStore, LevelCacheStoreProducer, LevelCacheIter);
