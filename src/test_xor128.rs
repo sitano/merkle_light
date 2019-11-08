@@ -393,8 +393,7 @@ fn test_various_trees_with_partial_cache() {
 
             // Sanity check loading the store from disk and then
             // re-creating the MT from it.
-            let store = DiskStore::new_from_disk(
-                2 * count - 1, config.clone()).unwrap();
+            let store = DiskStore::new_from_disk(2 * count - 1, &config).unwrap();
             let mt_cache2: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
                 MerkleTree::from_data_store(store, count);
 
@@ -470,7 +469,7 @@ fn test_various_trees_with_partial_cache() {
 
             // Then re-create an MT using LevelCacheStore and generate all proofs.
             let level_cache_store: LevelCacheStore<[u8; 16]> =
-                Store::new_from_disk(2 * count - 1, config.clone()).unwrap();
+                Store::new_from_disk(2 * count - 1, &config).unwrap();
             let mt_level_cache: MerkleTree<[u8; 16], XOR128, LevelCacheStore<_>> =
                 MerkleTree::from_data_store(level_cache_store, count);
 

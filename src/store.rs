@@ -78,7 +78,7 @@ pub trait Store<E: Element>:
     fn new_from_slice_with_config(size: usize, data: &[u8], config: StoreConfig) -> Result<Self>;
     fn new_from_slice(size: usize, data: &[u8]) -> Result<Self>;
 
-    fn new_from_disk(size: usize, config: StoreConfig) -> Result<Self>;
+    fn new_from_disk(size: usize, config: &StoreConfig) -> Result<Self>;
 
     fn write_at(&mut self, el: E, index: usize);
 
@@ -172,7 +172,7 @@ impl<E: Element> Store<E> for VecStore<E> {
         Ok(VecStore(v))
     }
 
-    fn new_from_disk(_size: usize, _config: StoreConfig) -> Result<Self> {
+    fn new_from_disk(_size: usize, _config: &StoreConfig) -> Result<Self> {
         unimplemented!("Cannot load a VecStore from disk");
     }
 
@@ -254,7 +254,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
 
         // If the specified file exists, load it from disk.
         if Path::new(&data_path).exists() {
-            return Self::new_from_disk(size, config);
+            return Self::new_from_disk(size, &config);
         }
 
         // Otherwise, create the file and allow it to be the on-disk store.
@@ -320,7 +320,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
         Ok(store)
     }
 
-    fn new_from_disk(size: usize, config: StoreConfig) -> Result<Self> {
+    fn new_from_disk(size: usize, config: &StoreConfig) -> Result<Self> {
         let data_path = StoreConfig::data_path(&config.path, &config.id);
 
         let file = File::open(&data_path)?;
@@ -587,7 +587,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         // the only supported usage of this call for this type of
         // Store.
         if Path::new(&data_path).exists() {
-            return Self::new_from_disk(size, config);
+            return Self::new_from_disk(size, &config);
         }
 
         Err(err_msg(
@@ -611,7 +611,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         unimplemented!("LevelCacheStore requires a StoreConfig");
     }
 
-    fn new_from_disk(store_range: usize, config: StoreConfig) -> Result<Self> {
+    fn new_from_disk(store_range: usize, config: &StoreConfig) -> Result<Self> {
         let data_path = StoreConfig::data_path(&config.path, &config.id);
 
         let file = File::open(data_path)?;
