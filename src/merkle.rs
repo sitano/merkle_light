@@ -139,18 +139,17 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         )
     }
 
-    /// Creates new merkle tree from an already allocated `Store`
-    /// (used with `*Store::new_from_disk`).
-    pub fn from_data_store(data: K, leafs: usize) -> MerkleTree<T, A, K> {
-        let pow = next_pow2(leafs);
+    /// Creates new merkle tree from an already allocated 'Store'
+    /// (used with 'Store::new_from_disk').  The specified 'size' is
+    /// the number of base data leafs in the MT.
+    pub fn from_data_store(data: K, size: usize) -> MerkleTree<T, A, K> {
+        let pow = next_pow2(size);
         let height = log2_pow2(2 * pow);
-
-        let elements = data.len() / 2 + 1;
         let root = data.read_at(data.len() - 1);
 
         MerkleTree {
             data,
-            leafs: elements,
+            leafs: size,
             height,
             root,
             _a: PhantomData,
@@ -159,27 +158,11 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     }
 
     fn build(data: K, leafs: usize, height: usize) -> Self {
-        // If the incoming is likely already the fully built data, use
-        // it instead of rebuilding the data.  This is the normal case
-        // for DiskStore::new_from_disk, which can re-use MTs and
-        // doesn't need to rebuild anything.
-        if data.len() == 2 * leafs - 1 {
-            let root = { data.read_at(data.len() - 1) };
-            return MerkleTree {
-                data,
-                leafs,
-                height,
-                root,
-                _a: PhantomData,
-                _t: PhantomData,
-            };
-        }
-
+        assert!(data.len() == leafs);
         if leafs <= SMALL_TREE_BUILD {
             return Self::build_small_tree(data, leafs, height);
         }
 
-        assert!(data.len() == leafs);
         let data_lock = Arc::new(RwLock::new(data));
 
         // Process one `level` at a time of `width` nodes. Each level has half the nodes
@@ -287,7 +270,6 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
 
     #[inline]
     fn build_small_tree(mut data: K, leafs: usize, height: usize) -> Self {
-        assert!(data.len() == leafs);
         let mut level: usize = 0;
         let mut width = leafs;
         let mut level_node_index = 0;
@@ -645,6 +627,12 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         self.data.compact(config)
     }
 
+    /// Removes the backing store for this merkle tree.
+    #[inline]
+    pub fn delete(&self, config: StoreConfig) -> std::io::Result<()> {
+        K::delete(config)
+    }
+
     /// Returns `true` if the vector contains no elements.
     #[inline]
     pub fn is_empty(&self) -> bool {
@@ -704,7 +692,8 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         assert!(leafs_count > 1);
 
         let pow = next_pow2(leafs_count);
-        let data = K::new_from_slice_with_config(2 * pow - 1, leafs, config)
+        let data = K::new_from_slice_with_config(
+            get_merkle_tree_len(leafs_count), leafs, config)
             .expect("Failed to create data store");
 
         Self::build(data, leafs_count, log2_pow2(2 * pow))
@@ -724,7 +713,9 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         assert!(leafs_count > 1);
 
         let pow = next_pow2(leafs_count);
-        let data = K::new_from_slice(2 * pow - 1, leafs).expect("Failed to create data store");
+        let data = K::new_from_slice(
+            get_merkle_tree_len(leafs_count), leafs)
+            .expect("Failed to create data store");
 
         Self::build(data, leafs_count, log2_pow2(2 * pow))
     }
@@ -769,7 +760,8 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
         let leafs = iter.opt_len().expect("must be sized");
         let pow = next_pow2(leafs);
 
-        let mut data = K::new(2 * pow - 1).expect("Failed to create data store");
+        let mut data = K::new(get_merkle_tree_len(leafs))
+            .expect("Failed to create data store");
         populate_data_par::<T, A, K, _>(&mut data, iter);
 
         Self::build(data, leafs, log2_pow2(2 * pow))
@@ -785,19 +777,28 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
 
         let leafs = iter.opt_len().expect("must be sized");
         let pow = next_pow2(leafs);
+        let height = log2_pow2(2 * pow);
 
-        let mut data =
-            K::new_with_config(2 * pow - 1, config).expect("Failed to create data store");
+        let mut data = K::new_with_config(
+            get_merkle_tree_len(leafs), config)
+            .expect("Failed to create data store");
 
-        // If the data store is empty, populate the base layer before
-        // building the tree.  If it's not empty, it likely already
-        // contains the built tree (as in the case where new_from_disk
-        // was invoked).
-        if !data.loaded_from_disk() {
-            populate_data_par::<T, A, K, _>(&mut data, iter);
+        // If the data store was loaded from disk, we know we have
+        // access to the full merkle tree.
+        if data.loaded_from_disk() {
+            let root = data.read_at(data.len() - 1);
+            return MerkleTree {
+                data,
+                leafs,
+                height,
+                root,
+                _a: PhantomData,
+                _t: PhantomData,
+            };
         }
 
-        Self::build(data, leafs, log2_pow2(2 * pow))
+        populate_data_par::<T, A, K, _>(&mut data, iter);
+        Self::build(data, leafs, height)
     }
 }
 
@@ -810,7 +811,8 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIterator<T> for MerkleTree<T,
         assert!(leafs > 1);
 
         let pow = next_pow2(leafs);
-        let mut data = K::new(2 * pow - 1).expect("Failed to create data store");
+        let mut data = K::new(get_merkle_tree_len(leafs))
+            .expect("Failed to create data store");
         populate_data::<T, A, K, I>(&mut data, iter);
 
         Self::build(data, leafs, log2_pow2(2 * pow))
@@ -826,18 +828,28 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIteratorWithConfig<T> for Mer
         assert!(leafs > 1);
 
         let pow = next_pow2(leafs);
-        let mut data =
-            K::new_with_config(2 * pow - 1, config).expect("Failed to create data store");
+        let height = log2_pow2(2 * pow);
 
-        // If the data store is empty, populate the base layer before
-        // building the tree.  If it's not empty, it likely already
-        // contains the built tree (as in the case where new_from_disk
-        // was invoked).
-        if !data.loaded_from_disk() {
-            populate_data::<T, A, K, I>(&mut data, iter);
+        let mut data = K::new_with_config(
+            get_merkle_tree_len(leafs), config)
+            .expect("Failed to create data store");
+
+        // If the data store was loaded from disk, we know we have
+        // access to the full merkle tree.
+        if data.loaded_from_disk() {
+            let root = data.read_at(data.len() - 1);
+            return MerkleTree {
+                data,
+                leafs,
+                height,
+                root,
+                _a: PhantomData,
+                _t: PhantomData,
+            };
         }
 
-        Self::build(data, leafs, log2_pow2(2 * pow))
+        populate_data::<T, A, K, I>(&mut data, iter);
+        Self::build(data, leafs, height)
     }
 }
 
@@ -856,6 +868,39 @@ impl Element for [u8; 32] {
     fn copy_to_slice(&self, bytes: &mut [u8]) {
         bytes.copy_from_slice(self);
     }
+}
+
+// This method returns the actual merkle tree length that will be
+// constructed while also considering 'leafs' inputs that are not
+// powers of 2.
+pub fn get_merkle_tree_len(leafs: usize) -> usize {
+    let mut len = 0;
+    let mut width = leafs;
+    while width > 1 {
+        if width & 1 == 1 {
+            width += 1;
+        }
+        len += width;
+        width >>= 1;
+    }
+
+    // Includes the root
+    len + 1
+}
+
+// This method returns the minimal number of 'leafs' given a merkle
+// tree length of 'len'.
+pub fn get_merkle_tree_leafs(len: usize) -> usize {
+    let mut leafs = len >> 2;
+    while leafs < len {
+        if get_merkle_tree_len(leafs) == len {
+            break;
+        } else {
+            leafs += 1;
+        }
+    }
+
+    leafs + 1
 }
 
 /// `next_pow2` returns next highest power of two from a given number if

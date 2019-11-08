@@ -1,8 +1,8 @@
 use failure::{err_msg, Error};
-use merkle::{next_pow2, Element};
+use merkle::{next_pow2, get_merkle_tree_leafs, Element};
 use positioned_io::{ReadAt, WriteAt};
 use serde::{Deserialize, Serialize};
-use std::fs::{File, OpenOptions};
+use std::fs::{remove_file, File, OpenOptions};
 use std::io::{copy, Seek, SeekFrom};
 use std::marker::PhantomData;
 use std::ops::{self, Index};
@@ -33,7 +33,7 @@ pub struct StoreConfig {
 }
 
 impl StoreConfig {
-    pub fn new(path: String, id: String, levels: usize) -> StoreConfig {
+    pub fn new(path: String, id: String, levels: usize) -> Self {
         StoreConfig {
             path: PathBuf::from(path),
             id,
@@ -50,6 +50,21 @@ impl StoreConfig {
             STORE_CONFIG_DATA_VERSION, id
         ))
     }
+
+    pub fn from_config(config: &StoreConfig, id: String, size: Option<usize>) -> Self {
+        let val = if let Some(size) = size {
+            Some(size)
+        } else {
+            config.size
+        };
+
+        StoreConfig {
+            path: config.path.clone(),
+            id,
+            size: val,
+            levels: config.levels,
+        }
+    }
 }
 
 /// Backing store of the merkle tree.
@@ -63,7 +78,7 @@ pub trait Store<E: Element>:
     fn new_from_slice_with_config(size: usize, data: &[u8], config: StoreConfig) -> Result<Self>;
     fn new_from_slice(size: usize, data: &[u8]) -> Result<Self>;
 
-    fn new_from_disk(size: usize, config: StoreConfig) -> Result<Self>;
+    fn new_from_disk(size: usize, config: &StoreConfig) -> Result<Self>;
 
     fn write_at(&mut self, el: E, index: usize);
 
@@ -73,6 +88,12 @@ pub trait Store<E: Element>:
     // position in `E` sizes (*not* in `u8`).
     fn copy_from_slice(&mut self, buf: &[u8], start: usize);
     fn compact(&mut self, config: StoreConfig) -> Result<bool>;
+
+    // Removes the store backing (does not require a mutable reference
+    // since the config should provide stateless context to what's
+    // needed to be removed -- with the exception of in memory stores,
+    // where this is arguably not important/needed).
+    fn delete(config: StoreConfig) -> std::io::Result<()>;
 
     fn read_at(&self, index: usize) -> E;
     fn read_range(&self, r: ops::Range<usize>) -> Vec<E>;
@@ -151,7 +172,7 @@ impl<E: Element> Store<E> for VecStore<E> {
         Ok(VecStore(v))
     }
 
-    fn new_from_disk(_size: usize, _config: StoreConfig) -> Result<Self> {
+    fn new_from_disk(_size: usize, _config: &StoreConfig) -> Result<Self> {
         unimplemented!("Cannot load a VecStore from disk");
     }
 
@@ -183,6 +204,10 @@ impl<E: Element> Store<E> for VecStore<E> {
         self.0.shrink_to_fit();
 
         Ok(true)
+    }
+
+    fn delete(_config: StoreConfig) -> std::io::Result<()> {
+        Ok(())
     }
 
     fn is_empty(&self) -> bool {
@@ -229,26 +254,26 @@ impl<E: Element> Store<E> for DiskStore<E> {
 
         // If the specified file exists, load it from disk.
         if Path::new(&data_path).exists() {
-            return Self::new_from_disk(size, config);
+            return Self::new_from_disk(size, &config);
         }
 
         // Otherwise, create the file and allow it to be the on-disk store.
-        let data = OpenOptions::new()
+        let file = OpenOptions::new()
             .write(true)
             .read(true)
             .create_new(true)
             .open(data_path)?;
 
-        let base_size = E::byte_len() * size;
-        data.set_len(base_size as u64)?;
+        let store_size = E::byte_len() * size;
+        file.set_len(store_size as u64)?;
 
         Ok(DiskStore {
             len: 0,
             elem_len: E::byte_len(),
             _e: Default::default(),
-            file: data,
+            file,
             loaded_from_disk: false,
-            store_size: base_size,
+            store_size,
         })
     }
 
@@ -269,9 +294,18 @@ impl<E: Element> Store<E> for DiskStore<E> {
     }
 
     fn new_from_slice_with_config(size: usize, data: &[u8], config: StoreConfig) -> Result<Self> {
+        assert_eq!(data.len() % E::byte_len(), 0);
+
         let mut store = Self::new_with_config(size, config)?;
-        store.store_copy_from_slice(0, data);
-        store.len = data.len() / store.elem_len;
+
+        // If the store was loaded from disk (based on the config
+        // information, avoid re-populating the store at this point
+        // since it can be assumed by the config that the data is
+        // already correct).
+        if !store.loaded_from_disk {
+            store.store_copy_from_slice(0, data);
+            store.len = data.len() / store.elem_len;
+        }
 
         Ok(store)
     }
@@ -286,11 +320,11 @@ impl<E: Element> Store<E> for DiskStore<E> {
         Ok(store)
     }
 
-    fn new_from_disk(size: usize, config: StoreConfig) -> Result<Self> {
+    fn new_from_disk(size: usize, config: &StoreConfig) -> Result<Self> {
         let data_path = StoreConfig::data_path(&config.path, &config.id);
 
-        let data = File::open(&data_path)?;
-        let metadata = data.metadata()?;
+        let file = File::open(&data_path)?;
+        let metadata = file.metadata()?;
         let store_size = metadata.len() as usize;
 
         // Sanity check.
@@ -300,7 +334,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
             len: size,
             elem_len: E::byte_len(),
             _e: Default::default(),
-            file: data,
+            file,
             loaded_from_disk: true,
             store_size,
         })
@@ -377,7 +411,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
     // access using LevelCacheStore::new_from_disk.
     fn compact(&mut self, config: StoreConfig) -> Result<bool> {
         // Determine how many leafs there are (in bytes).
-        let data_width = (self.len / 2 + 1) * self.elem_len;
+        let data_width = get_merkle_tree_leafs(self.len) * self.elem_len;
 
         // Calculate how large the cache should be (based on the
         // config.levels param).
@@ -423,6 +457,10 @@ impl<E: Element> Store<E> for DiskStore<E> {
         assert_eq!(self.len * self.elem_len, store_size);
 
         Ok(true)
+    }
+
+    fn delete(config: StoreConfig) -> std::io::Result<()> {
+        remove_file(StoreConfig::data_path(&config.path, &config.id))
     }
 
     fn is_empty(&self) -> bool {
@@ -511,9 +549,9 @@ impl<E: Element> Clone for DiskStore<E> {
 /// and can only be accessed with the same number of levels.
 ///
 /// NOTE: Unlike other store types, writes of any kind are not
-/// supported since we're accessing specially crafted on-disk data
-/// that requires a particular access pattern dictated at the time of
-/// creation/compaction.
+/// supported (except deletion) since we're accessing specially
+/// crafted on-disk data that requires a particular access pattern
+/// dictated at the time of creation/compaction.
 #[derive(Debug)]
 pub struct LevelCacheStore<E: Element> {
     len: usize,
@@ -549,7 +587,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         // the only supported usage of this call for this type of
         // Store.
         if Path::new(&data_path).exists() {
-            return Self::new_from_disk(size, config);
+            return Self::new_from_disk(size, &config);
         }
 
         Err(err_msg(
@@ -573,22 +611,24 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         unimplemented!("LevelCacheStore requires a StoreConfig");
     }
 
-    fn new_from_disk(size: usize, config: StoreConfig) -> Result<Self> {
+    fn new_from_disk(store_range: usize, config: &StoreConfig) -> Result<Self> {
         let data_path = StoreConfig::data_path(&config.path, &config.id);
 
-        let data = File::open(data_path)?;
-        let metadata = data.metadata()?;
+        let file = File::open(data_path)?;
+        let metadata = file.metadata()?;
         let store_size = metadata.len() as usize;
 
         // The LevelCacheStore base data layer must already be a
         // massaged next pow2 (guaranteed if created with
         // DiskStore::compact, which is the only supported method at
         // the moment).
+        let size = get_merkle_tree_leafs(store_range);
         assert_eq!(size, next_pow2(size));
 
         // Values below in bytes.
+        // Convert store_range from an element count to bytes.
+        let store_range = store_range * E::byte_len();
         let data_len = size * E::byte_len();
-        let store_range = 2 * data_len - 1;
 
         // Calculate cache start and the updated size with repect to
         // the data size.
@@ -604,7 +644,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         Ok(LevelCacheStore {
             len: store_range / E::byte_len(),
             elem_len: E::byte_len(),
-            file: data,
+            file,
             data_width: size,
             cache_index_start,
             store_size,
@@ -683,6 +723,10 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         Err(err_msg("Cannot compact this type of Store"))
     }
 
+    fn delete(config: StoreConfig) -> std::io::Result<()> {
+        remove_file(StoreConfig::data_path(&config.path, &config.id))
+    }
+
     fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -722,9 +766,7 @@ impl<E: Element> LevelCacheStore<E> {
         // Adjust read index if in the cached ranged to be shifted
         // over since the data stored is compacted.
         if start >= self.cache_index_start {
-            adjusted_start =
-                start - self.cache_index_start + (self.data_width * self.elem_len) + E::byte_len()
-                    - 1;
+            adjusted_start = start - self.cache_index_start + (self.data_width * self.elem_len);
         }
 
         assert_eq!(
