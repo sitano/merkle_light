@@ -93,7 +93,7 @@ pub trait Store<E: Element>:
     // since the config should provide stateless context to what's
     // needed to be removed -- with the exception of in memory stores,
     // where this is arguably not important/needed).
-    fn delete(config: StoreConfig) -> Result<bool>;
+    fn delete(config: StoreConfig) -> std::io::Result<()>;
 
     fn read_at(&self, index: usize) -> E;
     fn read_range(&self, r: ops::Range<usize>) -> Vec<E>;
@@ -206,8 +206,8 @@ impl<E: Element> Store<E> for VecStore<E> {
         Ok(true)
     }
 
-    fn delete(_config: StoreConfig) -> Result<bool> {
-        Ok(true)
+    fn delete(_config: StoreConfig) -> std::io::Result<()> {
+        Ok(())
     }
 
     fn is_empty(&self) -> bool {
@@ -459,10 +459,8 @@ impl<E: Element> Store<E> for DiskStore<E> {
         Ok(true)
     }
 
-    fn delete(config: StoreConfig) -> Result<bool> {
-        remove_file(StoreConfig::data_path(&config.path, &config.id))?;
-
-        Ok(true)
+    fn delete(config: StoreConfig) -> std::io::Result<()> {
+        remove_file(StoreConfig::data_path(&config.path, &config.id))
     }
 
     fn is_empty(&self) -> bool {
@@ -725,10 +723,8 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         Err(err_msg("Cannot compact this type of Store"))
     }
 
-    fn delete(config: StoreConfig) -> Result<bool> {
-        remove_file(StoreConfig::data_path(&config.path, &config.id))?;
-
-        Ok(true)
+    fn delete(config: StoreConfig) -> std::io::Result<()> {
+        remove_file(StoreConfig::data_path(&config.path, &config.id))
     }
 
     fn is_empty(&self) -> bool {

@@ -629,7 +629,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
 
     /// Removes the backing store for this merkle tree.
     #[inline]
-    pub fn delete(&self, config: StoreConfig) -> Result<bool> {
+    pub fn delete(&self, config: StoreConfig) -> std::io::Result<()> {
         K::delete(config)
     }
 
