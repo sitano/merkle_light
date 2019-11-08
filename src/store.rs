@@ -33,7 +33,7 @@ pub struct StoreConfig {
 }
 
 impl StoreConfig {
-    pub fn new(path: String, id: String, levels: usize) -> StoreConfig {
+    pub fn new(path: String, id: String, levels: usize) -> Self {
         StoreConfig {
             path: PathBuf::from(path),
             id,
@@ -49,6 +49,21 @@ impl StoreConfig {
             "sc-{:0>2}-data-{}.dat",
             STORE_CONFIG_DATA_VERSION, id
         ))
+    }
+
+    pub fn from_config(config: &StoreConfig, id: String, size: Option<usize>) -> Self {
+        let val = if let Some(size) = size {
+            Some(size)
+        } else {
+            config.size
+        };
+
+        StoreConfig {
+            path: config.path.clone(),
+            id,
+            size: val,
+            levels: config.levels,
+        }
     }
 }
 
