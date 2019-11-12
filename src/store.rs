@@ -33,10 +33,10 @@ pub struct StoreConfig {
 }
 
 impl StoreConfig {
-    pub fn new(path: String, id: String, levels: usize) -> Self {
+    pub fn new<T: Into<PathBuf>, S: Into<String>>(path: T, id: S, levels: usize) -> Self {
         StoreConfig {
-            path: PathBuf::from(path),
-            id,
+            path: path.into(),
+            id: id.into(),
             size: None,
             levels,
         }
@@ -51,7 +51,7 @@ impl StoreConfig {
         ))
     }
 
-    pub fn from_config(config: &StoreConfig, id: String, size: Option<usize>) -> Self {
+    pub fn from_config<S: Into<String>>(config: &StoreConfig, id: S, size: Option<usize>) -> Self {
         let val = if let Some(size) = size {
             Some(size)
         } else {
@@ -60,7 +60,7 @@ impl StoreConfig {
 
         StoreConfig {
             path: config.path.clone(),
-            id,
+            id: id.into(),
             size: val,
             levels: config.levels,
         }
