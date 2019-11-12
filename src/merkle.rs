@@ -692,8 +692,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         assert!(leafs_count > 1);
 
         let pow = next_pow2(leafs_count);
-        let data = K::new_from_slice_with_config(
-            get_merkle_tree_len(leafs_count), leafs, config)
+        let data = K::new_from_slice_with_config(get_merkle_tree_len(leafs_count), leafs, config)
             .expect("Failed to create data store");
 
         Self::build(data, leafs_count, log2_pow2(2 * pow))
@@ -713,8 +712,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         assert!(leafs_count > 1);
 
         let pow = next_pow2(leafs_count);
-        let data = K::new_from_slice(
-            get_merkle_tree_len(leafs_count), leafs)
+        let data = K::new_from_slice(get_merkle_tree_len(leafs_count), leafs)
             .expect("Failed to create data store");
 
         Self::build(data, leafs_count, log2_pow2(2 * pow))
@@ -760,8 +758,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
         let leafs = iter.opt_len().expect("must be sized");
         let pow = next_pow2(leafs);
 
-        let mut data = K::new(get_merkle_tree_len(leafs))
-            .expect("Failed to create data store");
+        let mut data = K::new(get_merkle_tree_len(leafs)).expect("Failed to create data store");
         populate_data_par::<T, A, K, _>(&mut data, iter);
 
         Self::build(data, leafs, log2_pow2(2 * pow))
@@ -779,8 +776,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
         let pow = next_pow2(leafs);
         let height = log2_pow2(2 * pow);
 
-        let mut data = K::new_with_config(
-            get_merkle_tree_len(leafs), config)
+        let mut data = K::new_with_config(get_merkle_tree_len(leafs), config)
             .expect("Failed to create data store");
 
         // If the data store was loaded from disk, we know we have
@@ -811,8 +807,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIterator<T> for MerkleTree<T,
         assert!(leafs > 1);
 
         let pow = next_pow2(leafs);
-        let mut data = K::new(get_merkle_tree_len(leafs))
-            .expect("Failed to create data store");
+        let mut data = K::new(get_merkle_tree_len(leafs)).expect("Failed to create data store");
         populate_data::<T, A, K, I>(&mut data, iter);
 
         Self::build(data, leafs, log2_pow2(2 * pow))
@@ -830,8 +825,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIteratorWithConfig<T> for Mer
         let pow = next_pow2(leafs);
         let height = log2_pow2(2 * pow);
 
-        let mut data = K::new_with_config(
-            get_merkle_tree_len(leafs), config)
+        let mut data = K::new_with_config(get_merkle_tree_len(leafs), config)
             .expect("Failed to create data store");
 
         // If the data store was loaded from disk, we know we have

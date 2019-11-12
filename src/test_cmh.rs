@@ -1,11 +1,11 @@
 #![cfg(test)]
 
 use hash::{Algorithm, Hashable};
-use store::VecStore;
 use merkle::MerkleTree;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::iter::FromIterator;
+use store::VecStore;
 use test_item::Item;
 
 /// Custom merkle hash util test

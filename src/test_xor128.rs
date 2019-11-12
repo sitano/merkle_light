@@ -141,10 +141,9 @@ fn test_read_into() {
     }
 
     let temp_dir = tempdir::TempDir::new("test_read_into").unwrap();
-    let current_path = temp_dir.path().to_str().unwrap().to_string();
     let config = StoreConfig::new(
-        current_path,
-        String::from("test-read-into"),
+        temp_dir.path(),
+        "test-read-into",
         DEFAULT_CACHED_ABOVE_BASE_LAYER,
     );
 
@@ -375,11 +374,13 @@ fn test_various_trees_with_partial_cache() {
         // different partial tree sizes).
         for i in 0..cached_above_base_levels {
             let temp_dir = tempdir::TempDir::new("test_various_trees_with_partial_cache").unwrap();
-            let current_path = temp_dir.path().to_str().unwrap().to_string();
 
             // Construct and store an MT using a named DiskStore.
             let config = StoreConfig::new(
-                current_path.clone(), String::from(format!("test-cache-{}", i)), i);
+                temp_dir.path(),
+                String::from(format!("test-cache-{}", i)),
+                i,
+            );
             let mut mt_cache: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
                 MerkleTree::from_iter_with_config(
                     (0..count).map(|x| {
@@ -518,7 +519,8 @@ fn test_various_trees_with_partial_cache() {
             // Delete the single store backing this MT (for this test,
             // the DiskStore is compacted and then shared with the
             // LevelCacheStore, so it's still a single store on disk).
-            mt_level_cache.delete(config.clone())
+            mt_level_cache
+                .delete(config.clone())
                 .expect("Failed to delete test store");
 
             // This also works (delete the store directly)
