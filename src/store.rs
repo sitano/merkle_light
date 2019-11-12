@@ -1,5 +1,5 @@
 use failure::{err_msg, Error};
-use merkle::{next_pow2, get_merkle_tree_leafs, Element};
+use merkle::{get_merkle_tree_leafs, next_pow2, Element};
 use positioned_io::{ReadAt, WriteAt};
 use serde::{Deserialize, Serialize};
 use std::fs::{remove_file, File, OpenOptions};

@@ -379,7 +379,10 @@ fn test_various_trees_with_partial_cache() {
 
             // Construct and store an MT using a named DiskStore.
             let config = StoreConfig::new(
-                current_path.clone(), String::from(format!("test-cache-{}", i)), i);
+                current_path.clone(),
+                String::from(format!("test-cache-{}", i)),
+                i,
+            );
             let mut mt_cache: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
                 MerkleTree::from_iter_with_config(
                     (0..count).map(|x| {
@@ -518,7 +521,8 @@ fn test_various_trees_with_partial_cache() {
             // Delete the single store backing this MT (for this test,
             // the DiskStore is compacted and then shared with the
             // LevelCacheStore, so it's still a single store on disk).
-            mt_level_cache.delete(config.clone())
+            mt_level_cache
+                .delete(config.clone())
                 .expect("Failed to delete test store");
 
             // This also works (delete the store directly)
