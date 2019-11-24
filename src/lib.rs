@@ -160,7 +160,8 @@
 
 extern crate log;
 
-extern crate failure;
+#[macro_use]
+extern crate anyhow;
 
 extern crate rayon;
 

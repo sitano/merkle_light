@@ -1,4 +1,4 @@
-use failure::{err_msg, Error};
+use anyhow::Result;
 use merkle::{get_merkle_tree_leafs, next_pow2, Element};
 use positioned_io::{ReadAt, WriteAt};
 use serde::{Deserialize, Serialize};
@@ -8,8 +8,6 @@ use std::marker::PhantomData;
 use std::ops::{self, Index};
 use std::path::{Path, PathBuf};
 use tempfile::tempfile;
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 pub const DEFAULT_CACHED_ABOVE_BASE_LAYER: usize = 7;
 
@@ -416,11 +414,12 @@ impl<E: Element> Store<E> for DiskStore<E> {
         // Calculate how large the cache should be (based on the
         // config.levels param).
         let mut cache_size = (2 * data_width) >> config.levels;
-        if cache_size >= 2 * data_width - 1 {
-            // The file cannot be compacted (to fix, provide a sane
-            // configuration).
-            return Err(err_msg("Cannot compact with this configuration"));
-        }
+        // The file cannot be compacted (to fix, provide a sane
+        // configuration).
+        ensure!(
+            cache_size < 2 * data_width - 1,
+            "Cannot compact with this configuration"
+        );
 
         // Calculate cache start and updated size with repect to the
         // data size.
@@ -592,9 +591,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
             return Self::new_from_disk(size, &config);
         }
 
-        Err(err_msg(
-            "Cannot create a LevelCacheStore in this way. Try DiskStore::compact",
-        ))
+        bail!("Cannot create a LevelCacheStore in this way. Try DiskStore::compact");
     }
 
     fn new(_size: usize) -> Result<Self> {
@@ -722,7 +719,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
     }
 
     fn compact(&mut self, _config: StoreConfig) -> Result<bool> {
-        Err(err_msg("Cannot compact this type of Store"))
+        bail!("Cannot compact this type of Store");
     }
 
     fn delete(config: StoreConfig) -> std::io::Result<()> {

@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Result;
 use hash::{Algorithm, Hashable};
 use log::debug;
 use proof::Proof;
@@ -7,8 +7,6 @@ use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::sync::{Arc, RwLock};
 use store::{Store, StoreConfig, VecStore};
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 /// Tree size (number of nodes) used as threshold to decide which build algorithm
 /// to use. Small trees (below this value) use the old build algorithm, optimized
