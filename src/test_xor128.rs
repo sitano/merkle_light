@@ -1,17 +1,17 @@
 #![cfg(test)]
 
-use hash::*;
-use merkle::{log2_pow2, next_pow2};
-use merkle::{Element, MerkleTree, SMALL_TREE_BUILD};
-use merkle::{FromIndexedParallelIterator, FromIteratorWithConfig};
+use crate::hash::*;
+use crate::merkle::{log2_pow2, next_pow2};
+use crate::merkle::{Element, MerkleTree, SMALL_TREE_BUILD};
+use crate::merkle::{FromIndexedParallelIterator, FromIteratorWithConfig};
+use crate::store::{
+    DiskStore, DiskStoreProducer, LevelCacheStore, Store, StoreConfig, VecStore,
+    DEFAULT_CACHED_ABOVE_BASE_LAYER,
+};
 use rayon::iter::{plumbing::*, IntoParallelIterator, ParallelIterator};
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-use store::{
-    DiskStore, DiskStoreProducer, LevelCacheStore, Store, StoreConfig, VecStore,
-    DEFAULT_CACHED_ABOVE_BASE_LAYER,
-};
 
 const SIZE: usize = 0x10;
 

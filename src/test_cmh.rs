@@ -1,12 +1,12 @@
 #![cfg(test)]
 
-use hash::{Algorithm, Hashable};
-use merkle::MerkleTree;
+use crate::hash::{Algorithm, Hashable};
+use crate::merkle::MerkleTree;
+use crate::store::VecStore;
+use crate::test_item::Item;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-use store::VecStore;
-use test_item::Item;
 
 /// Custom merkle hash util test
 #[derive(Debug, Clone, Default)]

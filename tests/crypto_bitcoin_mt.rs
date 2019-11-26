@@ -1,9 +1,6 @@
 #![cfg(test)]
 #![cfg(feature = "bitcoin")]
 
-extern crate crypto;
-extern crate merkletree;
-
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use merkletree::hash::{Algorithm, Hashable};

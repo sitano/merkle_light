@@ -1,4 +1,4 @@
-use hash::Hashable;
+use crate::hash::Hashable;
 use std::hash::Hasher;
 use std::mem;
 use std::slice;

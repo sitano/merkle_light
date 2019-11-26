@@ -1,8 +1,6 @@
 #![cfg(test)]
 #![cfg(feature = "bitcoin")]
 
-extern crate merkletree;
-extern crate ring;
 use merkletree::hash::{Algorithm, Hashable};
 use merkletree::merkle::MerkleTree;
 use merkletree::store::VecStore;

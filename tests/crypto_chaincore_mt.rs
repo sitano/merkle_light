@@ -1,9 +1,6 @@
 #![cfg(test)]
 #![cfg(feature = "chaincore")]
 
-extern crate crypto;
-extern crate merkletree;
-
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
 use merkletree::hash::Algorithm;
