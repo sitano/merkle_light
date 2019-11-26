@@ -68,6 +68,7 @@ fn test_custom_merkle_hasher() {
 
     assert_eq!(
         mt.read_range(0, 3)
+            .unwrap()
             .iter()
             .take(mt.leafs())
             .filter(|&&x| x.0 > 255)
@@ -75,7 +76,11 @@ fn test_custom_merkle_hasher() {
         0
     );
     assert_eq!(
-        mt.read_range(0, 3).iter().filter(|&&x| x.0 > 65535).count(),
+        mt.read_range(0, 3)
+            .unwrap()
+            .iter()
+            .filter(|&&x| x.0 > 65535)
+            .count(),
         0
     );
 }

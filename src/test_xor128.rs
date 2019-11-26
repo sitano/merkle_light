@@ -108,7 +108,7 @@ fn test_from_slice() {
     let x = [String::from("ars"), String::from("zxc")];
     let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::from_data(&x);
     assert_eq!(
-        mt.read_range(0, 3),
+        mt.read_range(0, 3).unwrap(),
         [
             [0, 97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -136,7 +136,7 @@ fn test_read_into() {
 
     let mut read_buffer: [u8; 16] = [0; 16];
     for (pos, &data) in target_data.iter().enumerate() {
-        mt.read_into(pos, &mut read_buffer);
+        mt.read_into(pos, &mut read_buffer).unwrap();
         assert_eq!(read_buffer, data);
     }
 
@@ -150,7 +150,7 @@ fn test_read_into() {
     let mt2: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
         MerkleTree::from_data_with_config(&x, config);
     for (pos, &data) in target_data.iter().enumerate() {
-        mt2.read_into(pos, &mut read_buffer);
+        mt2.read_into(pos, &mut read_buffer).unwrap();
         assert_eq!(read_buffer, data);
     }
 }
@@ -259,13 +259,13 @@ fn test_simple_tree() {
         assert_eq!(mt_base.leafs(), items);
         assert_eq!(mt_base.height(), log2_pow2(next_pow2(mt_base.len())));
         assert_eq!(
-            mt_base.read_range(0, mt_base.len()),
+            mt_base.read_range(0, mt_base.len()).unwrap(),
             answer[items - 2].as_slice()
         );
-        assert_eq!(mt_base.read_at(0), mt_base.read_at(0));
+        assert_eq!(mt_base.read_at(0).unwrap(), mt_base.read_at(0).unwrap());
 
         for i in 0..mt_base.leafs() {
-            let p = mt_base.gen_proof(i);
+            let p = mt_base.gen_proof(i).unwrap();
             assert!(p.validate::<XOR128>());
         }
 
@@ -286,27 +286,27 @@ fn test_simple_tree() {
             .collect();
         {
             let mt1: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
-                MerkleTree::from_byte_slice(&leafs);
+                MerkleTree::from_byte_slice(&leafs).unwrap();
             assert_eq!(mt1.leafs(), items);
             assert_eq!(mt1.height(), log2_pow2(next_pow2(mt1.len())));
             assert_eq!(
-                mt_base.read_range(0, mt_base.len()),
+                mt_base.read_range(0, mt_base.len()).unwrap(),
                 answer[items - 2].as_slice()
             );
 
             for i in 0..mt1.leafs() {
-                let p = mt1.gen_proof(i);
+                let p = mt1.gen_proof(i).unwrap();
                 assert!(p.validate::<XOR128>());
             }
         }
 
         {
             let mt2: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
-                MerkleTree::from_byte_slice(&leafs);
+                MerkleTree::from_byte_slice(&leafs).unwrap();
             assert_eq!(mt2.leafs(), items);
             assert_eq!(mt2.height(), log2_pow2(next_pow2(mt2.len())));
             for i in 0..mt2.leafs() {
-                let p = mt2.gen_proof(i);
+                let p = mt2.gen_proof(i).unwrap();
                 assert!(p.validate::<XOR128>());
             }
         }
@@ -340,7 +340,8 @@ fn test_large_tree() {
                 x.hash(&mut xor_128);
                 i.hash(&mut xor_128);
                 xor_128.hash()
-            }));
+            }))
+            .unwrap();
         assert_eq!(mt_disk.len(), 2 * count - 1);
     }
 }
@@ -388,7 +389,7 @@ fn test_various_trees_with_partial_cache() {
             // re-creating the MT from it.
             let store = DiskStore::new_from_disk(2 * count - 1, &config).unwrap();
             let mt_cache2: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
-                MerkleTree::from_data_store(store, count);
+                MerkleTree::from_data_store(store, count).unwrap();
 
             assert_eq!(mt_cache.len(), mt_cache2.len());
             assert_eq!(mt_cache.leafs(), mt_cache2.leafs());
@@ -397,7 +398,7 @@ fn test_various_trees_with_partial_cache() {
             assert_eq!(mt_cache.leafs(), count);
 
             // Generate and validate proof on the first element.
-            let p = mt_cache.gen_proof(0);
+            let p = mt_cache.gen_proof(0).unwrap();
             assert!(p.validate::<XOR128>());
 
             /*
@@ -435,7 +436,7 @@ fn test_various_trees_with_partial_cache() {
                 // First generate and validate the proof using the full
                 // range of data we have stored on disk (no partial tree
                 // is built or used in this case).
-                let p = mt_cache.gen_proof(j);
+                let p = mt_cache.gen_proof(j).unwrap();
                 assert!(p.validate::<XOR128>());
 
                 /*
@@ -477,7 +478,7 @@ fn test_various_trees_with_partial_cache() {
             let level_cache_store: LevelCacheStore<[u8; 16]> =
                 Store::new_from_disk(2 * count - 1, &config).unwrap();
             let mt_level_cache: MerkleTree<[u8; 16], XOR128, LevelCacheStore<_>> =
-                MerkleTree::from_data_store(level_cache_store, count);
+                MerkleTree::from_data_store(level_cache_store, count).unwrap();
 
             // Sanity check that after rebuild, the new MT properties match the original.
             assert_eq!(mt_level_cache.len(), mt_cache_len);

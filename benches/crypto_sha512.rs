@@ -2,25 +2,23 @@
 #![cfg(feature = "crypto_bench")]
 #![feature(test)]
 
-mod hash512;
-
-extern crate crypto;
-extern crate merkletree;
-extern crate rand;
-extern crate rayon;
 extern crate test;
+
+use std::hash::Hasher;
+use std::iter::FromIterator;
+
+mod hash512;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-use hash512::Hash512;
 use merkletree::hash::{Algorithm, Hashable};
 use merkletree::merkle::{FromIndexedParallelIterator, MerkleTree};
 use merkletree::store::{DiskStore, VecStore};
 use rand::Rng;
 use rayon::prelude::*;
-use std::hash::Hasher;
-use std::iter::FromIterator;
 use test::Bencher;
+
+use crate::hash512::Hash512;
 
 #[derive(Copy, Clone)]
 struct A(Sha512);
@@ -133,7 +131,7 @@ fn bench_crypto_sha512_from_data_5_proof(b: &mut Bencher) {
 
     b.iter(|| {
         for i in 0..values.len() {
-            let proof = tree.gen_proof(i);
+            let proof = tree.gen_proof(i).unwrap();
             test::black_box(proof);
         }
     });
@@ -144,7 +142,7 @@ fn bench_crypto_sha512_from_data_5_proof_check(b: &mut Bencher) {
     let values = tree_5();
     let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::from_iter(values.clone());
     let proofs = (0..values.len())
-        .map(|i| tree.gen_proof(i))
+        .map(|i| tree.gen_proof(i).unwrap())
         .collect::<Vec<_>>();
 
     b.iter(|| {
@@ -197,7 +195,7 @@ fn bench_crypto_sha512_from_data_160_proof(b: &mut Bencher) {
 
     b.iter(|| {
         for i in 0..values.len() {
-            let proof = tree.gen_proof(i);
+            let proof = tree.gen_proof(i).unwrap();
             test::black_box(proof);
         }
     });
@@ -208,7 +206,7 @@ fn bench_crypto_sha512_from_data_160_proof_check(b: &mut Bencher) {
     let values = tree_160();
     let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::from_iter(values.clone());
     let proofs = (0..values.len())
-        .map(|i| tree.gen_proof(i))
+        .map(|i| tree.gen_proof(i).unwrap())
         .collect::<Vec<_>>();
 
     b.iter(|| {
