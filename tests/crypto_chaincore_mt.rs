@@ -1,9 +1,6 @@
 #![cfg(test)]
 #![cfg(feature = "chaincore")]
 
-extern crate crypto;
-extern crate merkletree;
-
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
 use merkletree::hash::Algorithm;
@@ -104,7 +101,7 @@ fn test_merkle_tree_validate_data() {
 
     let t: MerkleTree<CryptoSHA256Hash, CryptoChainCoreAlgorithm, VecStore<_>> =
         MerkleTree::from_data(data);
-    let generated_proof = t.gen_proof(0);
+    let generated_proof = t.gen_proof(0).unwrap();
 
     let proof = Proof::new(
         generated_proof.lemma().to_owned(),

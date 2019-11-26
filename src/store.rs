@@ -1,15 +1,17 @@
-use failure::{err_msg, Error};
-use merkle::{get_merkle_tree_leafs, next_pow2, Element};
-use positioned_io::{ReadAt, WriteAt};
-use serde::{Deserialize, Serialize};
 use std::fs::{remove_file, File, OpenOptions};
 use std::io::{copy, Seek, SeekFrom};
 use std::marker::PhantomData;
 use std::ops::{self, Index};
 use std::path::{Path, PathBuf};
+
+use anyhow::{Context, Result};
+use positioned_io::{ReadAt, WriteAt};
+use rayon::iter::plumbing::*;
+use rayon::iter::*;
+use serde::{Deserialize, Serialize};
 use tempfile::tempfile;
 
-pub type Result<T> = std::result::Result<T, Error>;
+use crate::merkle::{get_merkle_tree_leafs, next_pow2, Element};
 
 pub const DEFAULT_CACHED_ABOVE_BASE_LAYER: usize = 7;
 
@@ -80,34 +82,36 @@ pub trait Store<E: Element>:
 
     fn new_from_disk(size: usize, config: &StoreConfig) -> Result<Self>;
 
-    fn write_at(&mut self, el: E, index: usize);
+    fn write_at(&mut self, el: E, index: usize) -> Result<()>;
 
     // Used to reduce lock contention and do the `E` to `u8`
     // conversion in `build` *outside* the lock.
     // `buf` is a slice of converted `E`s and `start` is its
     // position in `E` sizes (*not* in `u8`).
-    fn copy_from_slice(&mut self, buf: &[u8], start: usize);
+    fn copy_from_slice(&mut self, buf: &[u8], start: usize) -> Result<()>;
     fn compact(&mut self, config: StoreConfig) -> Result<bool>;
 
     // Removes the store backing (does not require a mutable reference
     // since the config should provide stateless context to what's
     // needed to be removed -- with the exception of in memory stores,
     // where this is arguably not important/needed).
-    fn delete(config: StoreConfig) -> std::io::Result<()>;
+    fn delete(config: StoreConfig) -> Result<()>;
 
-    fn read_at(&self, index: usize) -> E;
-    fn read_range(&self, r: ops::Range<usize>) -> Vec<E>;
-    fn read_into(&self, pos: usize, buf: &mut [u8]);
-    fn read_range_into(&self, start: usize, end: usize, buf: &mut [u8]);
+    fn read_at(&self, index: usize) -> Result<E>;
+    fn read_range(&self, r: ops::Range<usize>) -> Result<Vec<E>>;
+    fn read_into(&self, pos: usize, buf: &mut [u8]) -> Result<()>;
+    fn read_range_into(&self, start: usize, end: usize, buf: &mut [u8]) -> Result<()>;
 
     fn len(&self) -> usize;
     fn loaded_from_disk(&self) -> bool;
     fn is_empty(&self) -> bool;
-    fn push(&mut self, el: E);
+    fn push(&mut self, el: E) -> Result<()>;
 
     // Sync contents to disk (if it exists). This function is used to avoid
     // unnecessary flush calls at the cost of added code complexity.
-    fn sync(&self) {}
+    fn sync(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -130,12 +134,13 @@ impl<E: Element> Store<E> for VecStore<E> {
         Ok(VecStore(Vec::with_capacity(size)))
     }
 
-    fn write_at(&mut self, el: E, index: usize) {
+    fn write_at(&mut self, el: E, index: usize) -> Result<()> {
         if self.0.len() <= index {
             self.0.resize(index + 1, E::default());
         }
 
         self.0[index] = el;
+        Ok(())
     }
 
     // NOTE: Performance regression. To conform with the current API we are
@@ -143,8 +148,12 @@ impl<E: Element> Store<E> for VecStore<E> {
     // already stores `E` (in contrast with the `mmap` versions). We are
     // prioritizing performance for the `mmap` case which will be used in
     // production (`VecStore` is mainly for testing and backwards compatibility).
-    fn copy_from_slice(&mut self, buf: &[u8], start: usize) {
-        assert_eq!(buf.len() % E::byte_len(), 0);
+    fn copy_from_slice(&mut self, buf: &[u8], start: usize) -> Result<()> {
+        ensure!(
+            buf.len() % E::byte_len() == 0,
+            "buf size must be a multiple of {}",
+            E::byte_len()
+        );
         let num_elem = buf.len() / E::byte_len();
 
         if self.0.len() < start + num_elem {
@@ -155,6 +164,7 @@ impl<E: Element> Store<E> for VecStore<E> {
             start..start + num_elem,
             buf.chunks_exact(E::byte_len()).map(E::from_slice),
         );
+        Ok(())
     }
 
     fn new_from_slice_with_config(size: usize, data: &[u8], _config: StoreConfig) -> Result<Self> {
@@ -176,20 +186,21 @@ impl<E: Element> Store<E> for VecStore<E> {
         unimplemented!("Cannot load a VecStore from disk");
     }
 
-    fn read_at(&self, index: usize) -> E {
-        self.0[index].clone()
+    fn read_at(&self, index: usize) -> Result<E> {
+        Ok(self.0[index].clone())
     }
 
-    fn read_into(&self, index: usize, buf: &mut [u8]) {
+    fn read_into(&self, index: usize, buf: &mut [u8]) -> Result<()> {
         self.0[index].copy_to_slice(buf);
+        Ok(())
     }
 
-    fn read_range_into(&self, _start: usize, _end: usize, _buf: &mut [u8]) {
+    fn read_range_into(&self, _start: usize, _end: usize, _buf: &mut [u8]) -> Result<()> {
         unimplemented!("Not required here");
     }
 
-    fn read_range(&self, r: ops::Range<usize>) -> Vec<E> {
-        self.0.index(r).to_vec()
+    fn read_range(&self, r: ops::Range<usize>) -> Result<Vec<E>> {
+        Ok(self.0.index(r).to_vec())
     }
 
     fn len(&self) -> usize {
@@ -206,7 +217,7 @@ impl<E: Element> Store<E> for VecStore<E> {
         Ok(true)
     }
 
-    fn delete(_config: StoreConfig) -> std::io::Result<()> {
+    fn delete(_config: StoreConfig) -> Result<()> {
         Ok(())
     }
 
@@ -214,8 +225,9 @@ impl<E: Element> Store<E> for VecStore<E> {
         self.0.is_empty()
     }
 
-    fn push(&mut self, el: E) {
+    fn push(&mut self, el: E) -> Result<()> {
         self.0.push(el);
+        Ok(())
     }
 }
 
@@ -294,7 +306,11 @@ impl<E: Element> Store<E> for DiskStore<E> {
     }
 
     fn new_from_slice_with_config(size: usize, data: &[u8], config: StoreConfig) -> Result<Self> {
-        assert_eq!(data.len() % E::byte_len(), 0);
+        ensure!(
+            data.len() % E::byte_len() == 0,
+            "data size must be a multiple of {}",
+            E::byte_len()
+        );
 
         let mut store = Self::new_with_config(size, config)?;
 
@@ -303,7 +319,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
         // since it can be assumed by the config that the data is
         // already correct).
         if !store.loaded_from_disk {
-            store.store_copy_from_slice(0, data);
+            store.store_copy_from_slice(0, data)?;
             store.len = data.len() / store.elem_len;
         }
 
@@ -311,10 +327,14 @@ impl<E: Element> Store<E> for DiskStore<E> {
     }
 
     fn new_from_slice(size: usize, data: &[u8]) -> Result<Self> {
-        assert_eq!(data.len() % E::byte_len(), 0);
+        ensure!(
+            data.len() % E::byte_len() == 0,
+            "data size must be a multiple of {}",
+            E::byte_len()
+        );
 
         let mut store = Self::new(size)?;
-        store.store_copy_from_slice(0, data);
+        store.store_copy_from_slice(0, data)?;
         store.len = data.len() / store.elem_len;
 
         Ok(store)
@@ -328,7 +348,12 @@ impl<E: Element> Store<E> for DiskStore<E> {
         let store_size = metadata.len() as usize;
 
         // Sanity check.
-        assert_eq!(store_size, size * E::byte_len());
+        ensure!(
+            store_size == size * E::byte_len(),
+            "Invalid formatted file provided. Expected {}bytes, found {}bytes",
+            size * E::byte_len(),
+            store_size
+        );
 
         Ok(DiskStore {
             len: size,
@@ -340,62 +365,70 @@ impl<E: Element> Store<E> for DiskStore<E> {
         })
     }
 
-    fn write_at(&mut self, el: E, index: usize) {
-        self.store_copy_from_slice(index * self.elem_len, el.as_ref());
+    fn write_at(&mut self, el: E, index: usize) -> Result<()> {
+        self.store_copy_from_slice(index * self.elem_len, el.as_ref())?;
         self.len = std::cmp::max(self.len, index + 1);
+        Ok(())
     }
 
-    fn copy_from_slice(&mut self, buf: &[u8], start: usize) {
-        assert_eq!(buf.len() % self.elem_len, 0);
-        self.store_copy_from_slice(start * self.elem_len, buf);
+    fn copy_from_slice(&mut self, buf: &[u8], start: usize) -> Result<()> {
+        ensure!(
+            buf.len() % self.elem_len == 0,
+            "buf size must be a multiple of {}",
+            self.elem_len
+        );
+        self.store_copy_from_slice(start * self.elem_len, buf)?;
         self.len = std::cmp::max(self.len, start + buf.len() / self.elem_len);
+
+        Ok(())
     }
 
-    fn read_at(&self, index: usize) -> E {
+    fn read_at(&self, index: usize) -> Result<E> {
         let start = index * self.elem_len;
         let end = start + self.elem_len;
 
         let len = self.len * self.elem_len;
-        assert!(start < len, "start out of range {} >= {}", start, len);
-        assert!(end <= len, "end out of range {} > {}", end, len);
+        ensure!(start < len, "start out of range {} >= {}", start, len);
+        ensure!(end <= len, "end out of range {} > {}", end, len);
 
-        E::from_slice(&self.store_read_range(start, end))
+        Ok(E::from_slice(&self.store_read_range(start, end)?))
     }
 
-    fn read_into(&self, index: usize, buf: &mut [u8]) {
+    fn read_into(&self, index: usize, buf: &mut [u8]) -> Result<()> {
         let start = index * self.elem_len;
         let end = start + self.elem_len;
 
         let len = self.len * self.elem_len;
-        assert!(start < len, "start out of range {} >= {}", start, len);
-        assert!(end <= len, "end out of range {} > {}", end, len);
+        ensure!(start < len, "start out of range {} >= {}", start, len);
+        ensure!(end <= len, "end out of range {} > {}", end, len);
 
-        self.store_read_into(start, end, buf);
+        self.store_read_into(start, end, buf)
     }
 
-    fn read_range_into(&self, start: usize, end: usize, buf: &mut [u8]) {
+    fn read_range_into(&self, start: usize, end: usize, buf: &mut [u8]) -> Result<()> {
         let start = start * self.elem_len;
         let end = end * self.elem_len;
 
         let len = self.len * self.elem_len;
-        assert!(start < len, "start out of range {} >= {}", start, len);
-        assert!(end <= len, "end out of range {} > {}", end, len);
+        ensure!(start < len, "start out of range {} >= {}", start, len);
+        ensure!(end <= len, "end out of range {} > {}", end, len);
 
-        self.store_read_into(start, end, buf);
+        self.store_read_into(start, end, buf)
     }
 
-    fn read_range(&self, r: ops::Range<usize>) -> Vec<E> {
+    fn read_range(&self, r: ops::Range<usize>) -> Result<Vec<E>> {
         let start = r.start * self.elem_len;
         let end = r.end * self.elem_len;
 
         let len = self.len * self.elem_len;
-        assert!(start < len, "start out of range {} >= {}", start, len);
-        assert!(end <= len, "end out of range {} > {}", end, len);
+        ensure!(start < len, "start out of range {} >= {}", start, len);
+        ensure!(end <= len, "end out of range {} > {}", end, len);
 
-        self.store_read_range(start, end)
+        Ok(self
+            .store_read_range(start, end)?
             .chunks(self.elem_len)
             .map(E::from_slice)
-            .collect()
+            .collect())
     }
 
     fn len(&self) -> usize {
@@ -416,11 +449,12 @@ impl<E: Element> Store<E> for DiskStore<E> {
         // Calculate how large the cache should be (based on the
         // config.levels param).
         let mut cache_size = (2 * data_width) >> config.levels;
-        if cache_size >= 2 * data_width - 1 {
-            // The file cannot be compacted (to fix, provide a sane
-            // configuration).
-            return Err(err_msg("Cannot compact with this configuration"));
-        }
+        // The file cannot be compacted (to fix, provide a sane
+        // configuration).
+        ensure!(
+            cache_size < 2 * data_width - 1,
+            "Cannot compact with this configuration"
+        );
 
         // Calculate cache start and updated size with repect to the
         // data size.
@@ -439,7 +473,7 @@ impl<E: Element> Store<E> for DiskStore<E> {
         // Copy the data from the cached region to just after the base
         // layer data.
         let written = copy(&mut reader, &mut self.file)?;
-        assert_eq!(written, cache_size as u64);
+        ensure!(written == cache_size as u64, "Failed to copy all data");
 
         // Truncate the data on-disk just after the base layer data
         // and cached data that should be persisted.
@@ -451,39 +485,41 @@ impl<E: Element> Store<E> for DiskStore<E> {
 
         // Sync and sanity check that we match on disk (this can be
         // removed if needed).
-        self.sync();
+        self.sync()?;
         let metadata = self.file.metadata()?;
         let store_size = metadata.len() as usize;
-        assert_eq!(self.len * self.elem_len, store_size);
+        ensure!(
+            self.len * self.elem_len == store_size,
+            "Inconsistent metadata detected"
+        );
 
         Ok(true)
     }
 
-    fn delete(config: StoreConfig) -> std::io::Result<()> {
-        remove_file(StoreConfig::data_path(&config.path, &config.id))
+    fn delete(config: StoreConfig) -> Result<()> {
+        let path = StoreConfig::data_path(&config.path, &config.id);
+        remove_file(&path).with_context(|| format!("Failed to delete {:?}", &path))
     }
 
     fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    fn push(&mut self, el: E) {
+    fn push(&mut self, el: E) -> Result<()> {
         let len = self.len;
-        assert!(
+        ensure!(
             (len + 1) * self.elem_len <= self.store_size(),
-            format!(
-                "not enough space, len: {}, E size {}, store len {}",
-                len,
-                self.elem_len,
-                self.store_size()
-            )
+            "not enough space, len: {}, E size {}, store len {}",
+            len,
+            self.elem_len,
+            self.store_size()
         );
 
-        self.write_at(el, len);
+        self.write_at(el, len)
     }
 
-    fn sync(&self) {
-        self.file.sync_all().expect("failed to sync file");
+    fn sync(&self) -> Result<()> {
+        self.file.sync_all().context("failed to sync file")
     }
 }
 
@@ -492,43 +528,47 @@ impl<E: Element> DiskStore<E> {
         self.store_size
     }
 
-    pub fn store_read_range(&self, start: usize, end: usize) -> Vec<u8> {
+    pub fn store_read_range(&self, start: usize, end: usize) -> Result<Vec<u8>> {
         let read_len = end - start;
         let mut read_data = vec![0; read_len];
 
         self.file
             .read_exact_at(start as u64, &mut read_data)
-            .unwrap_or_else(|_| {
-                panic!(
+            .with_context(|| {
+                format!(
                     "failed to read {} bytes from file at offset {}",
                     read_len, start
                 )
-            });
+            })?;
 
-        assert_eq!(read_data.len(), read_len);
+        ensure!(read_data.len() == read_len, "Failed to read the full range");
 
-        read_data
+        Ok(read_data)
     }
 
-    pub fn store_read_into(&self, start: usize, end: usize, buf: &mut [u8]) {
+    pub fn store_read_into(&self, start: usize, end: usize, buf: &mut [u8]) -> Result<()> {
         self.file
             .read_exact_at(start as u64, buf)
-            .unwrap_or_else(|_| {
-                panic!(
+            .with_context(|| {
+                format!(
                     "failed to read {} bytes from file at offset {}",
                     end - start,
                     start
                 )
-            });
+            })?;
 
-        assert_eq!(buf.len(), end - start);
+        Ok(())
     }
 
-    pub fn store_copy_from_slice(&mut self, start: usize, slice: &[u8]) {
-        assert!(start + slice.len() <= self.store_size);
-        self.file
-            .write_all_at(start as u64, slice)
-            .expect("failed to write file");
+    pub fn store_copy_from_slice(&mut self, start: usize, slice: &[u8]) -> Result<()> {
+        ensure!(
+            start + slice.len() <= self.store_size,
+            "Requested slice too large (max: {})",
+            self.store_size
+        );
+        self.file.write_all_at(start as u64, slice)?;
+
+        Ok(())
     }
 }
 
@@ -592,9 +632,7 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
             return Self::new_from_disk(size, &config);
         }
 
-        Err(err_msg(
-            "Cannot create a LevelCacheStore in this way. Try DiskStore::compact",
-        ))
+        bail!("Cannot create a LevelCacheStore in this way. Try DiskStore::compact");
     }
 
     fn new(_size: usize) -> Result<Self> {
@@ -625,7 +663,10 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         // DiskStore::compact, which is the only supported method at
         // the moment).
         let size = get_merkle_tree_leafs(store_range);
-        assert_eq!(size, next_pow2(size));
+        ensure!(
+            size == next_pow2(size),
+            "Inconsistent merkle tree height detected"
+        );
 
         // Values below in bytes.
         // Convert store_range from an element count to bytes.
@@ -641,7 +682,10 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
 
         // Sanity checks that the StoreConfig levels matches this
         // particular on-disk file.
-        assert_eq!(store_size, data_len + cache_size);
+        ensure!(
+            store_size == data_len + cache_size,
+            "Inconsistent store size detected"
+        );
 
         Ok(LevelCacheStore {
             len: store_range / E::byte_len(),
@@ -654,63 +698,76 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
         })
     }
 
-    fn write_at(&mut self, _el: E, _index: usize) {
+    fn write_at(&mut self, _el: E, _index: usize) -> Result<()> {
         unimplemented!("Not supported by the LevelCacheStore");
     }
 
-    fn copy_from_slice(&mut self, _buf: &[u8], _start: usize) {
+    fn copy_from_slice(&mut self, _buf: &[u8], _start: usize) -> Result<()> {
         unimplemented!("Not supported by the LevelCacheStore");
     }
 
-    fn read_at(&self, index: usize) -> E {
+    fn read_at(&self, index: usize) -> Result<E> {
         let start = index * self.elem_len;
         let end = start + self.elem_len;
 
         let len = self.len * self.elem_len;
-        assert!(start < len, "start out of range {} >= {}", start, len);
-        assert!(end <= len, "end out of range {} > {}", end, len);
-        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
+        ensure!(start < len, "start out of range {} >= {}", start, len);
+        ensure!(end <= len, "end out of range {} > {}", end, len);
+        ensure!(
+            start <= self.data_width * self.elem_len || start >= self.cache_index_start,
+            "out of bounds"
+        );
 
-        E::from_slice(&self.store_read_range(start, end))
+        Ok(E::from_slice(&self.store_read_range(start, end)?))
     }
 
-    fn read_into(&self, index: usize, buf: &mut [u8]) {
+    fn read_into(&self, index: usize, buf: &mut [u8]) -> Result<()> {
         let start = index * self.elem_len;
         let end = start + self.elem_len;
 
         let len = self.len * self.elem_len;
-        assert!(start < len, "start out of range {} >= {}", start, len);
-        assert!(end <= len, "end out of range {} > {}", end, len);
-        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
+        ensure!(start < len, "start out of range {} >= {}", start, len);
+        ensure!(end <= len, "end out of range {} > {}", end, len);
+        ensure!(
+            start <= self.data_width * self.elem_len || start >= self.cache_index_start,
+            "out of bounds"
+        );
 
-        self.store_read_into(start, end, buf);
+        self.store_read_into(start, end, buf)
     }
 
-    fn read_range_into(&self, start: usize, end: usize, buf: &mut [u8]) {
+    fn read_range_into(&self, start: usize, end: usize, buf: &mut [u8]) -> Result<()> {
         let start = start * self.elem_len;
         let end = end * self.elem_len;
 
         let len = self.len * self.elem_len;
-        assert!(start < len, "start out of range {} >= {}", start, len);
-        assert!(end <= len, "end out of range {} > {}", end, len);
-        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
+        ensure!(start < len, "start out of range {} >= {}", start, len);
+        ensure!(end <= len, "end out of range {} > {}", end, len);
+        ensure!(
+            start <= self.data_width * self.elem_len || start >= self.cache_index_start,
+            "out of bounds"
+        );
 
-        self.store_read_into(start, end, buf);
+        self.store_read_into(start, end, buf)
     }
 
-    fn read_range(&self, r: ops::Range<usize>) -> Vec<E> {
+    fn read_range(&self, r: ops::Range<usize>) -> Result<Vec<E>> {
         let start = r.start * self.elem_len;
         let end = r.end * self.elem_len;
 
         let len = self.len * self.elem_len;
-        assert!(start < len, "start out of range {} >= {}", start, len);
-        assert!(end <= len, "end out of range {} > {}", end, len);
-        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
+        ensure!(start < len, "start out of range {} >= {}", start, len);
+        ensure!(end <= len, "end out of range {} > {}", end, len);
+        ensure!(
+            start <= self.data_width * self.elem_len || start >= self.cache_index_start,
+            "out of bounds"
+        );
 
-        self.store_read_range(start, end)
+        Ok(self
+            .store_read_range(start, end)?
             .chunks(self.elem_len)
             .map(E::from_slice)
-            .collect()
+            .collect())
     }
 
     fn len(&self) -> usize {
@@ -722,34 +779,33 @@ impl<E: Element> Store<E> for LevelCacheStore<E> {
     }
 
     fn compact(&mut self, _config: StoreConfig) -> Result<bool> {
-        Err(err_msg("Cannot compact this type of Store"))
+        bail!("Cannot compact this type of Store");
     }
 
-    fn delete(config: StoreConfig) -> std::io::Result<()> {
-        remove_file(StoreConfig::data_path(&config.path, &config.id))
+    fn delete(config: StoreConfig) -> Result<()> {
+        let path = StoreConfig::data_path(&config.path, &config.id);
+        remove_file(&path).with_context(|| format!("Failed to delete {:?}", &path))
     }
 
     fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    fn push(&mut self, el: E) {
+    fn push(&mut self, el: E) -> Result<()> {
         let len = self.len;
-        assert!(
+        ensure!(
             (len + 1) * self.elem_len <= self.store_size(),
-            format!(
-                "not enough space, len: {}, E size {}, store len {}",
-                len,
-                self.elem_len,
-                self.store_size()
-            )
+            "not enough space, len: {}, E size {}, store len {}",
+            len,
+            self.elem_len,
+            self.store_size()
         );
 
-        self.write_at(el, len);
+        self.write_at(el, len)
     }
 
-    fn sync(&self) {
-        self.file.sync_all().expect("failed to sync file");
+    fn sync(&self) -> Result<()> {
+        self.file.sync_all().context("failed to sync file")
     }
 }
 
@@ -758,12 +814,15 @@ impl<E: Element> LevelCacheStore<E> {
         self.store_size
     }
 
-    pub fn store_read_range(&self, start: usize, end: usize) -> Vec<u8> {
+    pub fn store_read_range(&self, start: usize, end: usize) -> Result<Vec<u8>> {
         let read_len = end - start;
         let mut read_data = vec![0; read_len];
         let mut adjusted_start = start;
 
-        assert!(start <= self.data_width * self.elem_len || start >= self.cache_index_start);
+        ensure!(
+            start <= self.data_width * self.elem_len || start >= self.cache_index_start,
+            "out of bounds"
+        );
 
         // Adjust read index if in the cached ranged to be shifted
         // over since the data stored is compacted.
@@ -773,30 +832,28 @@ impl<E: Element> LevelCacheStore<E> {
 
         self.file
             .read_exact_at(adjusted_start as u64, &mut read_data)
-            .unwrap_or_else(|_| {
-                panic!(
+            .with_context(|| {
+                format!(
                     "failed to read {} bytes from file at offset {}",
                     read_len, start
                 )
-            });
+            })?;
 
-        assert_eq!(read_data.len(), read_len);
-
-        read_data
+        Ok(read_data)
     }
 
-    pub fn store_read_into(&self, start: usize, end: usize, buf: &mut [u8]) {
+    pub fn store_read_into(&self, start: usize, end: usize, buf: &mut [u8]) -> Result<()> {
         self.file
             .read_exact_at(start as u64, buf)
-            .unwrap_or_else(|_| {
-                panic!(
+            .with_context(|| {
+                format!(
                     "failed to read {} bytes from file at offset {}",
                     end - start,
                     start
                 )
-            });
+            })?;
 
-        assert_eq!(buf.len(), end - start);
+        Ok(())
     }
 
     pub fn store_copy_from_slice(&mut self, _start: usize, _slice: &[u8]) {
@@ -812,9 +869,6 @@ impl<E: Element> Clone for LevelCacheStore<E> {
         unimplemented!("We can't clone a store with an already associated file");
     }
 }
-
-use rayon::iter::plumbing::*;
-use rayon::iter::*;
 
 // Using a macro as it is not possible to do a generic implementation for all stores.
 
@@ -929,6 +983,7 @@ macro_rules! impl_parallel_iter {
                     current,
                     end,
                     store,
+                    err: false,
                 }
             }
 
@@ -958,12 +1013,13 @@ macro_rules! impl_parallel_iter {
         pub struct $iter<'data, E: 'data + Element> {
             current: usize,
             end: usize,
+            err: bool,
             store: &'data $name<E>,
         }
 
         impl<'data, E: 'data + Element> $iter<'data, E> {
             fn is_done(&self) -> bool {
-                self.len() == 0
+                !self.err && self.len() == 0
             }
         }
 
@@ -975,10 +1031,16 @@ macro_rules! impl_parallel_iter {
                     return None;
                 }
 
-                let el = self.store.read_at(self.current);
-                self.current += 1;
-
-                Some(el)
+                match self.store.read_at(self.current) {
+                    Ok(el) => {
+                        self.current += 1;
+                        Some(el)
+                    }
+                    _ => {
+                        self.err = true;
+                        None
+                    }
+                }
             }
         }
 
@@ -995,10 +1057,16 @@ macro_rules! impl_parallel_iter {
                     return None;
                 }
 
-                let el = self.store.read_at(self.end - 1);
-                self.end -= 1;
-
-                Some(el)
+                match self.store.read_at(self.end - 1) {
+                    Ok(el) => {
+                        self.end -= 1;
+                        Some(el)
+                    }
+                    _ => {
+                        self.err = true;
+                        None
+                    }
+                }
             }
         }
     };

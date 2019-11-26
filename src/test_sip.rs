@@ -1,14 +1,14 @@
 #![cfg(test)]
 
-use hash::{Algorithm, Hashable};
-use merkle::log2_pow2;
-use merkle::next_pow2;
-use merkle::MerkleTree;
+use crate::hash::{Algorithm, Hashable};
+use crate::merkle::log2_pow2;
+use crate::merkle::next_pow2;
+use crate::merkle::MerkleTree;
+use crate::store::VecStore;
+use crate::test_item::Item;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-use store::VecStore;
-use test_item::Item;
 
 impl Algorithm<Item> for DefaultHasher {
     #[inline]
@@ -111,10 +111,13 @@ fn test_simple_tree() {
 
         assert_eq!(mt.leafs(), items);
         assert_eq!(mt.height(), log2_pow2(next_pow2(mt.len())));
-        assert_eq!(mt.read_range(0, mt.len()), answer[items - 2].as_slice());
+        assert_eq!(
+            mt.read_range(0, mt.len()).unwrap(),
+            answer[items - 2].as_slice()
+        );
 
         for i in 0..mt.leafs() {
-            let p = mt.gen_proof(i);
+            let p = mt.gen_proof(i).unwrap();
             assert!(p.validate::<DefaultHasher>());
         }
     }

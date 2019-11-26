@@ -1,9 +1,9 @@
 #![cfg(test)]
 #![allow(unsafe_code)]
 
+use crate::hash::{Algorithm, Hashable};
+use crate::merkle::Element;
 use byteorder::{ByteOrder, NativeEndian};
-use hash::{Algorithm, Hashable};
-use merkle::Element;
 use std::mem;
 use std::slice;
 

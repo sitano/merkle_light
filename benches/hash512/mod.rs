@@ -1,3 +1,3 @@
 mod hash512;
 
-pub use hash512::hash512::Hash512;
+pub use self::hash512::Hash512;

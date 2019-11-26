@@ -158,21 +158,8 @@
 )]
 #![cfg_attr(feature = "nightly", allow(unstable_features))]
 
-extern crate log;
-
-extern crate failure;
-
-extern crate rayon;
-
-extern crate memmap;
-
-extern crate tempdir;
-
-extern crate tempfile;
-
-extern crate positioned_io;
-
-extern crate serde;
+#[macro_use]
+extern crate anyhow;
 
 /// Hash infrastructure for items in Merkle tree.
 pub mod hash;
@@ -188,9 +175,6 @@ pub mod proof;
 
 /// Merkle tree abstractions, implementation and algorithms.
 pub mod merkle;
-
-#[cfg(test)]
-extern crate byteorder;
 
 /// Tests data.
 #[cfg(test)]
