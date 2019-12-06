@@ -889,49 +889,16 @@ impl Element for [u8; 32] {
     }
 }
 
-// This method returns the actual merkle tree length that will be
-// constructed while also considering 'leafs' inputs that are not
-// powers of 2.
+// This method returns the actual merkle tree length, but requires
+// that leafs is a power of 2.
 pub fn get_merkle_tree_len(leafs: usize) -> usize {
-    if leafs == 1 {
-        // With a single leaf, the normal build algorithm will add a
-        // leaf, which causes a parent to also be required.
-        return 3;
-    }
-
-    let mut len = 0;
-    let mut width = leafs;
-    while width > 1 {
-        if width & 1 == 1 {
-            width += 1;
-        }
-        len += width;
-        width >>= 1;
-    }
-
-    // Includes the root
-    len + 1
+    2 * next_pow2(leafs) - 1
 }
 
 // This method returns the minimal number of 'leafs' given a merkle
-// tree length of 'len'.
+// tree length of 'len', where leafs must be a power of 2.
 pub fn get_merkle_tree_leafs(len: usize) -> usize {
-    let mut leafs = len >> 1;
-    if leafs == 1 {
-        return 2;
-    } else {
-        leafs >>= 1;
-    }
-
-    while leafs < len {
-        if get_merkle_tree_len(leafs) == len {
-            break;
-        } else {
-            leafs += 1;
-        }
-    }
-
-    leafs + 1
+    (len >> 1) + 1
 }
 
 /// `next_pow2` returns next highest power of two from a given number if
