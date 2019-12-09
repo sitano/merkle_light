@@ -5,11 +5,11 @@
 extern crate test;
 
 use std::hash::Hasher;
-use std::iter::FromIterator;
 
 mod hash512;
 mod ringx;
 
+use anyhow::Result;
 use merkletree::hash::{Algorithm, Hashable};
 use merkletree::merkle::MerkleTree;
 use merkletree::store::VecStore;
@@ -61,18 +61,15 @@ impl Algorithm<Hash512> for B {
     }
 }
 
-fn tree_5() -> Vec<Hash512> {
-    ["one", "two", "three", "four"]
-        .iter()
-        .map(|x| {
-            let mut a = B::new();
-            Hashable::hash(x, &mut a);
-            a.hash()
-        })
-        .collect::<Vec<Hash512>>()
+fn tree_5() -> impl Iterator<Item = Result<Hash512>> {
+    ["one", "two", "three", "four"].iter().map(|x| {
+        let mut a = B::new();
+        Hashable::hash(x, &mut a);
+        Ok(a.hash())
+    })
 }
 
-fn tree_160() -> Vec<Hash512> {
+fn tree_160() -> impl Iterator<Item = Result<Hash512>> {
     let mut values = vec![vec![0u8; 256]; 160];
     let mut rng = rand::IsaacRng::new_unseeded();
 
@@ -80,14 +77,11 @@ fn tree_160() -> Vec<Hash512> {
         rng.fill_bytes(&mut v);
     }
 
-    values
-        .iter()
-        .map(|x| {
-            let mut a = B::new();
-            a.write(x.as_ref());
-            a.hash()
-        })
-        .collect::<Vec<Hash512>>()
+    values.into_iter().map(|x| {
+        let mut a = B::new();
+        a.write(x.as_ref());
+        Ok(a.hash())
+    })
 }
 
 #[bench]
@@ -101,17 +95,15 @@ fn bench_ringx_sha512(b: &mut Bencher) {
 
 #[bench]
 fn bench_ringx_sha512_from_data_5(b: &mut Bencher) {
-    let values = tree_5();
-    b.iter(|| MerkleTree::<Hash512, B, VecStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, B, VecStore<_>>::try_from_iter(tree_5()).unwrap());
 }
 
 #[bench]
 fn bench_ringx_sha512_from_data_5_proof(b: &mut Bencher) {
-    let values = tree_5();
-    let tree: MerkleTree<Hash512, B, VecStore<_>> = MerkleTree::from_iter(values.clone());
+    let tree: MerkleTree<Hash512, B, VecStore<_>> = MerkleTree::try_from_iter(tree_5()).unwrap();
 
     b.iter(|| {
-        for i in 0..values.len() {
+        for i in 0..tree.len() {
             let proof = tree.gen_proof(i).unwrap();
             test::black_box(proof);
         }
@@ -120,9 +112,8 @@ fn bench_ringx_sha512_from_data_5_proof(b: &mut Bencher) {
 
 #[bench]
 fn bench_ringx_sha512_from_data_5_proof_check(b: &mut Bencher) {
-    let values = tree_5();
-    let tree: MerkleTree<Hash512, B, VecStore<_>> = MerkleTree::from_iter(values.clone());
-    let proofs = (0..values.len())
+    let tree: MerkleTree<Hash512, B, VecStore<_>> = MerkleTree::try_from_iter(tree_5()).unwrap();
+    let proofs = (0..tree.len())
         .map(|i| tree.gen_proof(i).unwrap())
         .collect::<Vec<_>>();
 
@@ -135,17 +126,15 @@ fn bench_ringx_sha512_from_data_5_proof_check(b: &mut Bencher) {
 
 #[bench]
 fn bench_ringx_sha512_from_data_160(b: &mut Bencher) {
-    let values = tree_160();
-    b.iter(|| MerkleTree::<Hash512, B, VecStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, B, VecStore<_>>::try_from_iter(tree_160()).unwrap());
 }
 
 #[bench]
 fn bench_ringx_sha512_from_data_160_proof(b: &mut Bencher) {
-    let values = tree_160();
-    let tree: MerkleTree<Hash512, B, VecStore<_>> = MerkleTree::from_iter(values.clone());
+    let tree: MerkleTree<Hash512, B, VecStore<_>> = MerkleTree::try_from_iter(tree_160()).unwrap();
 
     b.iter(|| {
-        for i in 0..values.len() {
+        for i in 0..tree.len() {
             let proof = tree.gen_proof(i).unwrap();
             test::black_box(proof);
         }
@@ -155,8 +144,8 @@ fn bench_ringx_sha512_from_data_160_proof(b: &mut Bencher) {
 #[bench]
 fn bench_ringx_sha512_from_data_160_proof_check(b: &mut Bencher) {
     let values = tree_160();
-    let tree: MerkleTree<Hash512, B, VecStore<_>> = MerkleTree::from_iter(values.clone());
-    let proofs = (0..values.len())
+    let tree: MerkleTree<Hash512, B, VecStore<_>> = MerkleTree::try_from_iter(values).unwrap();
+    let proofs = (0..tree.len())
         .map(|i| tree.gen_proof(i).unwrap())
         .collect::<Vec<_>>();
 

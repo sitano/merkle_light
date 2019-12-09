@@ -8,7 +8,6 @@ use crate::store::VecStore;
 use crate::test_item::Item;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
-use std::iter::FromIterator;
 
 impl Algorithm<Item> for DefaultHasher {
     #[inline]
@@ -98,16 +97,17 @@ fn test_simple_tree() {
     ];
     for items in 2..8 {
         let mut a = DefaultHasher::new();
-        let mt: MerkleTree<Item, DefaultHasher, VecStore<_>> = MerkleTree::from_iter(
+        let mt: MerkleTree<Item, DefaultHasher, VecStore<_>> = MerkleTree::try_from_iter(
             [1, 2, 3, 4, 5, 6, 7, 8]
                 .iter()
                 .map(|x| {
                     a.reset();
                     x.hash(&mut a);
-                    a.hash()
+                    Ok(a.hash())
                 })
                 .take(items),
-        );
+        )
+        .unwrap();
 
         assert_eq!(mt.leafs(), items);
         assert_eq!(mt.height(), log2_pow2(next_pow2(mt.len())));

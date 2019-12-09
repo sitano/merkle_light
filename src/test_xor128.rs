@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 use crate::hash::*;
+use crate::merkle::FromIndexedParallelIterator;
 use crate::merkle::{log2_pow2, next_pow2};
 use crate::merkle::{Element, MerkleTree, SMALL_TREE_BUILD};
-use crate::merkle::{FromIndexedParallelIterator, FromIteratorWithConfig};
 use crate::store::{
     DiskStore, DiskStoreProducer, LevelCacheStore, Store, StoreConfig, VecStore,
     DEFAULT_CACHED_ABOVE_BASE_LAYER,
@@ -11,7 +11,6 @@ use crate::store::{
 use rayon::iter::{plumbing::*, IntoParallelIterator, ParallelIterator};
 use std::fmt;
 use std::hash::Hasher;
-use std::iter::FromIterator;
 
 const SIZE: usize = 0x10;
 
@@ -106,7 +105,8 @@ impl Element for [u8; 16] {
 #[test]
 fn test_from_slice() {
     let x = [String::from("ars"), String::from("zxc")];
-    let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::from_data(&x);
+    let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
+        MerkleTree::from_data(&x).expect("failed to create tree");
     assert_eq!(
         mt.read_range(0, 3).unwrap(),
         [
@@ -127,7 +127,8 @@ fn test_from_slice() {
 #[test]
 fn test_read_into() {
     let x = [String::from("ars"), String::from("zxc")];
-    let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::from_data(&x);
+    let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
+        MerkleTree::from_data(&x).expect("failed to create tree");
     let target_data = [
         [0, 97, 114, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 122, 120, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -148,7 +149,7 @@ fn test_read_into() {
     );
 
     let mt2: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
-        MerkleTree::from_data_with_config(&x, config);
+        MerkleTree::from_data_with_config(&x, config).expect("failed to create tree");
     for (pos, &data) in target_data.iter().enumerate() {
         mt2.read_into(pos, &mut read_buffer).unwrap();
         assert_eq!(read_buffer, data);
@@ -158,12 +159,14 @@ fn test_read_into() {
 #[test]
 fn test_from_iter() {
     let mut a = XOR128::new();
+
     let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
-        MerkleTree::from_iter(["a", "b", "c"].iter().map(|x| {
+        MerkleTree::try_from_iter(["a", "b", "c"].iter().map(|x| {
             a.reset();
             x.hash(&mut a);
-            a.hash()
-        }));
+            Ok(a.hash())
+        }))
+        .unwrap();
     assert_eq!(mt.len(), 7);
     assert_eq!(mt.height(), 3);
 }
@@ -245,16 +248,17 @@ fn test_simple_tree() {
 
     for items in 2..8 {
         let mut a = XOR128::new();
-        let mt_base: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::from_iter(
+        let mt_base: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::try_from_iter(
             [1, 2, 3, 4, 5, 6, 7, 8]
                 .iter()
                 .map(|x| {
                     a.reset();
                     x.hash(&mut a);
-                    a.hash()
+                    Ok(a.hash())
                 })
                 .take(items),
-        );
+        )
+        .unwrap();
 
         assert_eq!(mt_base.leafs(), items);
         assert_eq!(mt_base.height(), log2_pow2(next_pow2(mt_base.len())));
@@ -325,12 +329,13 @@ fn test_large_tree() {
     // shouldn't increase test times considerably.)
     for i in 0..100 {
         let mt_vec: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
-            MerkleTree::from_iter((0..count).map(|x| {
+            MerkleTree::try_from_iter((0..count).map(|x| {
                 a.reset();
                 x.hash(&mut a);
                 i.hash(&mut a);
-                a.hash()
-            }));
+                Ok(a.hash())
+            }))
+            .unwrap();
         assert_eq!(mt_vec.len(), 2 * count - 1);
 
         let mt_disk: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
@@ -375,15 +380,16 @@ fn test_various_trees_with_partial_cache() {
                 i,
             );
             let mut mt_cache: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
-                MerkleTree::from_iter_with_config(
+                MerkleTree::try_from_iter_with_config(
                     (0..count).map(|x| {
                         a.reset();
                         x.hash(&mut a);
                         count.hash(&mut a);
-                        a.hash()
+                        Ok(a.hash())
                     }),
                     config.clone(),
-                );
+                )
+                .expect("failed to create merkle tree from iter with config");
 
             // Sanity check loading the store from disk and then
             // re-creating the MT from it.

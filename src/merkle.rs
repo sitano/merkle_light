@@ -91,25 +91,27 @@ pub trait Element: Ord + Clone + AsRef<[u8]> + Sync + Send + Default + std::fmt:
 
 impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     /// Creates new merkle from a sequence of hashes.
-    pub fn new<I: IntoIterator<Item = T>>(data: I) -> MerkleTree<T, A, K> {
-        Self::from_iter(data)
+    pub fn new<I: IntoIterator<Item = T>>(data: I) -> Result<MerkleTree<T, A, K>> {
+        Self::try_from_iter(data.into_iter().map(Ok))
     }
 
     /// Creates new merkle from a sequence of hashes.
     pub fn new_with_config<I: IntoIterator<Item = T>>(
         data: I,
         config: StoreConfig,
-    ) -> MerkleTree<T, A, K> {
-        Self::from_iter_with_config(data, config)
+    ) -> Result<MerkleTree<T, A, K>> {
+        Self::try_from_iter_with_config(data.into_iter().map(Ok), config)
     }
 
     /// Creates new merkle tree from a list of hashable objects.
-    pub fn from_data<O: Hashable<A>, I: IntoIterator<Item = O>>(data: I) -> MerkleTree<T, A, K> {
+    pub fn from_data<O: Hashable<A>, I: IntoIterator<Item = O>>(
+        data: I,
+    ) -> Result<MerkleTree<T, A, K>> {
         let mut a = A::default();
-        Self::from_iter(data.into_iter().map(|x| {
+        Self::try_from_iter(data.into_iter().map(|x| {
             a.reset();
             x.hash(&mut a);
-            a.hash()
+            Ok(a.hash())
         }))
     }
 
@@ -117,13 +119,13 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     pub fn from_data_with_config<O: Hashable<A>, I: IntoIterator<Item = O>>(
         data: I,
         config: StoreConfig,
-    ) -> MerkleTree<T, A, K> {
+    ) -> Result<MerkleTree<T, A, K>> {
         let mut a = A::default();
-        Self::from_iter_with_config(
+        Self::try_from_iter_with_config(
             data.into_iter().map(|x| {
                 a.reset();
                 x.hash(&mut a);
-                a.hash()
+                Ok(a.hash())
             }),
             config,
         )
@@ -719,7 +721,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
 
         let pow = next_pow2(leafs_count);
         let data = K::new_from_slice_with_config(get_merkle_tree_len(leafs_count), leafs, config)
-            .context("Failed to create data store")?;
+            .context("failed to create data store")?;
 
         Self::build(data, leafs_count, log2_pow2(2 * pow))
     }
@@ -738,7 +740,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
 
         let pow = next_pow2(leafs_count);
         let data = K::new_from_slice(get_merkle_tree_len(leafs_count), leafs)
-            .context("Failed to create data store")?;
+            .context("failed to create data store")?;
 
         Self::build(data, leafs_count, log2_pow2(2 * pow))
     }
@@ -759,15 +761,6 @@ where
         I::Iter: IndexedParallelIterator;
 }
 
-pub trait FromIteratorWithConfig<T>
-where
-    T: Send,
-{
-    fn from_iter_with_config<I>(par_iter: I, config: StoreConfig) -> Self
-    where
-        I: IntoIterator<Item = T>;
-}
-
 // NOTE: This use cannot accept a StoreConfig.
 impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
     for MerkleTree<T, A, K>
@@ -783,7 +776,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
         let leafs = iter.opt_len().expect("must be sized");
         let pow = next_pow2(leafs);
 
-        let mut data = K::new(get_merkle_tree_len(leafs)).expect("Failed to create data store");
+        let mut data = K::new(get_merkle_tree_len(leafs)).expect("failed to create data store");
         populate_data_par::<T, A, K, _>(&mut data, iter)?;
 
         Self::build(data, leafs, log2_pow2(2 * pow))
@@ -802,7 +795,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
         let height = log2_pow2(2 * pow);
 
         let mut data = K::new_with_config(get_merkle_tree_len(leafs), config)
-            .context("Failed to create data store")?;
+            .context("failed to create data store")?;
 
         // If the data store was loaded from disk, we know we have
         // access to the full merkle tree.
@@ -823,25 +816,31 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
     }
 }
 
-impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIterator<T> for MerkleTree<T, A, K> {
-    /// Creates new merkle tree from an iterator over hashable objects.
-    fn from_iter<I: IntoIterator<Item = T>>(into: I) -> Self {
+impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
+    /// Attempts to create a new merkle tree using hashable objects yielded by
+    /// the provided iterator. This method returns the first error yielded by
+    /// the iterator, if the iterator yielded an error.
+    pub fn try_from_iter<I: IntoIterator<Item = Result<T>>>(into: I) -> Result<Self> {
         let iter = into.into_iter();
 
-        let leafs = iter.size_hint().1.unwrap();
-        assert!(leafs > 1);
+        let (_, n) = iter.size_hint();
+        let leafs = n.ok_or_else(|| anyhow!("could not get size hint from iterator"))?;
+        ensure!(leafs > 1, "not enough leaves");
 
         let pow = next_pow2(leafs);
-        let mut data = K::new(get_merkle_tree_len(leafs)).expect("Failed to create data store");
-        populate_data::<T, A, K, I>(&mut data, iter).expect("Failed to populate data");
+        let mut data = K::new(get_merkle_tree_len(leafs)).context("failed to create data store")?;
+        populate_data::<T, A, K, I>(&mut data, iter).context("failed to populate data")?;
 
-        Self::build(data, leafs, log2_pow2(2 * pow)).expect("Failed to build merkletree")
+        Self::build(data, leafs, log2_pow2(2 * pow))
     }
-}
 
-impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIteratorWithConfig<T> for MerkleTree<T, A, K> {
-    /// Creates new merkle tree from an iterator over hashable objects.
-    fn from_iter_with_config<I: IntoIterator<Item = T>>(into: I, config: StoreConfig) -> Self {
+    /// Attempts to create a new merkle tree using hashable objects yielded by
+    /// the provided iterator and store config. This method returns the first
+    /// error yielded by the iterator, if the iterator yielded an error.
+    pub fn try_from_iter_with_config<I: IntoIterator<Item = Result<T>>>(
+        into: I,
+        config: StoreConfig,
+    ) -> Result<Self> {
         let iter = into.into_iter();
 
         let leafs = iter.size_hint().1.unwrap();
@@ -851,24 +850,28 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIteratorWithConfig<T> for Mer
         let height = log2_pow2(2 * pow);
 
         let mut data = K::new_with_config(get_merkle_tree_len(leafs), config)
-            .expect("Failed to create data store");
+            .context("failed to create data store")?;
 
         // If the data store was loaded from disk, we know we have
         // access to the full merkle tree.
         if data.loaded_from_disk() {
-            let root = data.read_at(data.len() - 1).expect("Failed to read root");
-            return MerkleTree {
+            let root = data
+                .read_at(data.len() - 1)
+                .context("failed to read root")?;
+
+            return Ok(MerkleTree {
                 data,
                 leafs,
                 height,
                 root,
                 _a: PhantomData,
                 _t: PhantomData,
-            };
+            });
         }
 
-        populate_data::<T, A, K, I>(&mut data, iter).expect("Failed to populate data");
-        Self::build(data, leafs, height).expect("Failed to build")
+        populate_data::<T, A, K, I>(&mut data, iter).expect("failed to populate data");
+
+        Self::build(data, leafs, height)
     }
 }
 
@@ -922,7 +925,12 @@ pub fn log2_pow2(n: usize) -> usize {
     n.trailing_zeros() as usize
 }
 
-pub fn populate_data<T: Element, A: Algorithm<T>, K: Store<T>, I: IntoIterator<Item = T>>(
+pub fn populate_data<
+    T: Element,
+    A: Algorithm<T>,
+    K: Store<T>,
+    I: IntoIterator<Item = Result<T>>,
+>(
     data: &mut K,
     iter: <I as std::iter::IntoIterator>::IntoIter,
 ) -> Result<()> {
@@ -934,6 +942,10 @@ pub fn populate_data<T: Element, A: Algorithm<T>, K: Store<T>, I: IntoIterator<I
 
     let mut a = A::default();
     for item in iter {
+        // short circuit the tree-populating routine if the iterator yields an
+        // error
+        let item = item?;
+
         a.reset();
         buf.extend(a.leaf(item).as_ref());
         if buf.len() >= BUILD_DATA_BLOCK_SIZE * T::byte_len() {

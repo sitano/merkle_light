@@ -5,10 +5,10 @@
 extern crate test;
 
 use std::hash::Hasher;
-use std::iter::FromIterator;
 
 mod hash512;
 
+use anyhow::Result;
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
 use merkletree::hash::{Algorithm, Hashable};
@@ -61,18 +61,15 @@ impl Algorithm<Hash512> for A {
     }
 }
 
-fn tree_5() -> Vec<Hash512> {
-    ["one", "two", "three", "four"]
-        .iter()
-        .map(|x| {
-            let mut a = A::new();
-            Hashable::hash(x, &mut a);
-            a.hash()
-        })
-        .collect::<Vec<Hash512>>()
+fn tree_5() -> impl Iterator<Item = Result<Hash512>> {
+    ["one", "two", "three", "four"].into_iter().map(|x| {
+        let mut a = A::new();
+        Hashable::hash(x, &mut a);
+        Ok(a.hash())
+    })
 }
 
-fn tree_160() -> Vec<Hash512> {
+fn tree_160_par() -> impl IndexedParallelIterator<Item = Hash512> {
     let mut values = vec![vec![0u8; 256]; 160];
     let mut rng = rand::IsaacRng::new_unseeded();
 
@@ -80,17 +77,29 @@ fn tree_160() -> Vec<Hash512> {
         rng.fill_bytes(&mut v);
     }
 
-    values
-        .par_iter()
-        .map(|x| {
-            let mut a = A::new();
-            a.write(x.as_ref());
-            a.hash()
-        })
-        .collect::<Vec<Hash512>>()
+    values.into_par_iter().map(|x| {
+        let mut a = A::new();
+        a.write(x.as_ref());
+        a.hash()
+    })
 }
 
-fn tree_30000() -> Vec<Hash512> {
+fn tree_160() -> impl Iterator<Item = Result<Hash512>> {
+    let mut values = vec![vec![0u8; 256]; 160];
+    let mut rng = rand::IsaacRng::new_unseeded();
+
+    for mut v in &mut values {
+        rng.fill_bytes(&mut v);
+    }
+
+    values.into_iter().map(|x| {
+        let mut a = A::new();
+        a.write(x.as_ref());
+        Ok(a.hash())
+    })
+}
+
+fn tree_30000() -> impl Iterator<Item = Result<Hash512>> {
     let mut values = vec![vec![0u8; 256]; 30000];
     let mut rng = rand::IsaacRng::new_unseeded();
 
@@ -98,14 +107,26 @@ fn tree_30000() -> Vec<Hash512> {
         rng.fill_bytes(&mut v);
     }
 
-    values
-        .par_iter()
-        .map(|x| {
-            let mut a = A::new();
-            a.write(x.as_ref());
-            a.hash()
-        })
-        .collect::<Vec<Hash512>>()
+    values.into_iter().map(|x| {
+        let mut a = A::new();
+        a.write(x.as_ref());
+        Ok(a.hash())
+    })
+}
+
+fn tree_30000_par() -> impl IndexedParallelIterator<Item = Hash512> {
+    let mut values = vec![vec![0u8; 256]; 30000];
+    let mut rng = rand::IsaacRng::new_unseeded();
+
+    for mut v in &mut values {
+        rng.fill_bytes(&mut v);
+    }
+
+    values.into_par_iter().map(|x| {
+        let mut a = A::new();
+        a.write(x.as_ref());
+        a.hash()
+    })
 }
 
 #[bench]
@@ -120,17 +141,15 @@ fn bench_crypto_sha512(b: &mut Bencher) {
 
 #[bench]
 fn bench_crypto_sha512_from_data_5(b: &mut Bencher) {
-    let values = tree_5();
-    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::try_from_iter(tree_5()).unwrap());
 }
 
 #[bench]
 fn bench_crypto_sha512_from_data_5_proof(b: &mut Bencher) {
-    let values = tree_5();
-    let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::from_iter(values.clone());
+    let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::try_from_iter(tree_5()).unwrap();
 
     b.iter(|| {
-        for i in 0..values.len() {
+        for i in 0..tree.len() {
             let proof = tree.gen_proof(i).unwrap();
             test::black_box(proof);
         }
@@ -139,9 +158,9 @@ fn bench_crypto_sha512_from_data_5_proof(b: &mut Bencher) {
 
 #[bench]
 fn bench_crypto_sha512_from_data_5_proof_check(b: &mut Bencher) {
-    let values = tree_5();
-    let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::from_iter(values.clone());
-    let proofs = (0..values.len())
+    let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::try_from_iter(tree_5()).unwrap();
+
+    let proofs = (0..tree.len())
         .map(|i| tree.gen_proof(i).unwrap())
         .collect::<Vec<_>>();
 
@@ -154,47 +173,40 @@ fn bench_crypto_sha512_from_data_5_proof_check(b: &mut Bencher) {
 
 #[bench]
 fn bench_crypto_sha512_from_data_160_vec(b: &mut Bencher) {
-    let values = tree_160();
-    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::try_from_iter(tree_160()).unwrap());
 }
 
 #[bench]
 fn bench_crypto_sha512_from_data_160_mmap(b: &mut Bencher) {
-    let values = tree_160();
-    b.iter(|| MerkleTree::<Hash512, A, DiskStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, DiskStore<_>>::try_from_iter(tree_160()).unwrap());
 }
 
 #[bench]
 fn bench_crypto_sha512_from_data_160_par(b: &mut Bencher) {
-    let values = tree_160();
-    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::from_par_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::from_par_iter(tree_160_par()));
 }
 
 #[bench]
 fn bench_crypto_sha512_from_data_30000_vec(b: &mut Bencher) {
-    let values = tree_30000();
-    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::try_from_iter(tree_30000()).unwrap());
 }
 
 #[bench]
 fn bench_crypto_sha512_from_data_30000_mmap(b: &mut Bencher) {
-    let values = tree_30000();
-    b.iter(|| MerkleTree::<Hash512, A, DiskStore<_>>::from_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, DiskStore<_>>::try_from_iter(tree_30000()).unwrap());
 }
 
 #[bench]
 fn bench_crypto_sha512_from_data_30000_par(b: &mut Bencher) {
-    let values = tree_30000();
-    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::from_par_iter(values.clone()));
+    b.iter(|| MerkleTree::<Hash512, A, VecStore<_>>::from_par_iter(tree_30000_par()));
 }
 
 #[bench]
 fn bench_crypto_sha512_from_data_160_proof(b: &mut Bencher) {
-    let values = tree_160();
-    let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::from_iter(values.clone());
+    let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::try_from_iter(tree_160()).unwrap();
 
     b.iter(|| {
-        for i in 0..values.len() {
+        for i in 0..tree.len() {
             let proof = tree.gen_proof(i).unwrap();
             test::black_box(proof);
         }
@@ -203,9 +215,8 @@ fn bench_crypto_sha512_from_data_160_proof(b: &mut Bencher) {
 
 #[bench]
 fn bench_crypto_sha512_from_data_160_proof_check(b: &mut Bencher) {
-    let values = tree_160();
-    let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::from_iter(values.clone());
-    let proofs = (0..values.len())
+    let tree: MerkleTree<Hash512, A, VecStore<_>> = MerkleTree::try_from_iter(tree_160()).unwrap();
+    let proofs = (0..tree.len())
         .map(|i| tree.gen_proof(i).unwrap())
         .collect::<Vec<_>>();
 
