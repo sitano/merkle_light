@@ -93,7 +93,6 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     /// Creates new merkle from a sequence of hashes.
     pub fn new<I: IntoIterator<Item = T>>(data: I) -> Result<MerkleTree<T, A, K>> {
         Self::try_from_iter(data.into_iter().map(Ok))
-            .map_err(|err| anyhow!("Failed to create merkle tree from iter: {}", err))
     }
 
     /// Creates new merkle from a sequence of hashes.
@@ -101,8 +100,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         data: I,
         config: StoreConfig,
     ) -> Result<MerkleTree<T, A, K>> {
-        Self::from_iter_with_config(data.into_iter().map(Ok), config)
-            .map_err(|err| anyhow!("Failed to create merkle tree from iter: {}", err))
+        Self::try_from_iter_with_config(data.into_iter().map(Ok), config)
     }
 
     /// Creates new merkle tree from a list of hashable objects.
@@ -115,7 +113,6 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
             x.hash(&mut a);
             Ok(a.hash())
         }))
-        .map_err(|err| anyhow!("Failed to create merkle tree from iter: {}", err))
     }
 
     /// Creates new merkle tree from a list of hashable objects.
@@ -124,7 +121,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         config: StoreConfig,
     ) -> Result<MerkleTree<T, A, K>> {
         let mut a = A::default();
-        Self::from_iter_with_config(
+        Self::try_from_iter_with_config(
             data.into_iter().map(|x| {
                 a.reset();
                 x.hash(&mut a);
@@ -132,7 +129,6 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
             }),
             config,
         )
-        .map_err(|err| anyhow!("failed to create merkle tree from data and config: {}", err))
     }
 
     /// Creates new merkle tree from an already allocated 'Store'
@@ -725,7 +721,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
 
         let pow = next_pow2(leafs_count);
         let data = K::new_from_slice_with_config(get_merkle_tree_len(leafs_count), leafs, config)
-            .context("Failed to create data store")?;
+            .context("failed to create data store")?;
 
         Self::build(data, leafs_count, log2_pow2(2 * pow))
     }
@@ -744,7 +740,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
 
         let pow = next_pow2(leafs_count);
         let data = K::new_from_slice(get_merkle_tree_len(leafs_count), leafs)
-            .context("Failed to create data store")?;
+            .context("failed to create data store")?;
 
         Self::build(data, leafs_count, log2_pow2(2 * pow))
     }
@@ -780,7 +776,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
         let leafs = iter.opt_len().expect("must be sized");
         let pow = next_pow2(leafs);
 
-        let mut data = K::new(get_merkle_tree_len(leafs)).expect("Failed to create data store");
+        let mut data = K::new(get_merkle_tree_len(leafs)).expect("failed to create data store");
         populate_data_par::<T, A, K, _>(&mut data, iter)?;
 
         Self::build(data, leafs, log2_pow2(2 * pow))
@@ -799,7 +795,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
         let height = log2_pow2(2 * pow);
 
         let mut data = K::new_with_config(get_merkle_tree_len(leafs), config)
-            .context("Failed to create data store")?;
+            .context("failed to create data store")?;
 
         // If the data store was loaded from disk, we know we have
         // access to the full merkle tree.
@@ -832,11 +828,8 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         ensure!(leafs > 1, "not enough leaves");
 
         let pow = next_pow2(leafs);
-        let mut data = K::new(get_merkle_tree_len(leafs))
-            .map_err(|err| anyhow!("Failed to create data store: {}", err))?;
-
-        populate_data::<T, A, K, I>(&mut data, iter)
-            .map_err(|err| anyhow!("Failed to populate data: {}", err))?;
+        let mut data = K::new(get_merkle_tree_len(leafs)).context("failed to create data store")?;
+        populate_data::<T, A, K, I>(&mut data, iter).context("failed to populate data")?;
 
         Self::build(data, leafs, log2_pow2(2 * pow))
     }
@@ -844,7 +837,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     /// Attempts to create a new merkle tree using hashable objects yielded by
     /// the provided iterator and store config. This method returns the first
     /// error yielded by the iterator, if the iterator yielded an error.
-    pub fn from_iter_with_config<I: IntoIterator<Item = Result<T>>>(
+    pub fn try_from_iter_with_config<I: IntoIterator<Item = Result<T>>>(
         into: I,
         config: StoreConfig,
     ) -> Result<Self> {
@@ -857,14 +850,14 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         let height = log2_pow2(2 * pow);
 
         let mut data = K::new_with_config(get_merkle_tree_len(leafs), config)
-            .map_err(|err| anyhow!("Failed to create data store: {}", err))?;
+            .context("failed to create data store")?;
 
         // If the data store was loaded from disk, we know we have
         // access to the full merkle tree.
         if data.loaded_from_disk() {
             let root = data
                 .read_at(data.len() - 1)
-                .map_err(|err| anyhow!("Failed to read root: {}", err))?;
+                .context("failed to read root")?;
 
             return Ok(MerkleTree {
                 data,
@@ -876,7 +869,7 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
             });
         }
 
-        populate_data::<T, A, K, I>(&mut data, iter).expect("Failed to populate data");
+        populate_data::<T, A, K, I>(&mut data, iter).expect("failed to populate data");
 
         Self::build(data, leafs, height)
     }

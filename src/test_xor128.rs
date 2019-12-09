@@ -380,7 +380,7 @@ fn test_various_trees_with_partial_cache() {
                 i,
             );
             let mut mt_cache: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
-                MerkleTree::from_iter_with_config(
+                MerkleTree::try_from_iter_with_config(
                     (0..count).map(|x| {
                         a.reset();
                         x.hash(&mut a);
