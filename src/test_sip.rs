@@ -8,7 +8,6 @@ use crate::store::VecStore;
 use crate::test_item::Item;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
-use std::iter::FromIterator;
 
 impl Algorithm<Item> for DefaultHasher {
     #[inline]

@@ -91,44 +91,48 @@ pub trait Element: Ord + Clone + AsRef<[u8]> + Sync + Send + Default + std::fmt:
 
 impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
     /// Creates new merkle from a sequence of hashes.
-    pub fn new<I: IntoIterator<Item = T>>(data: I) -> MerkleTree<T, A, K> {
-        let iter = data.into_iter().map(|x| Ok(x));
-        Self::try_from_iter(iter).unwrap()
+    pub fn new<I: IntoIterator<Item = T>>(data: I) -> Result<MerkleTree<T, A, K>> {
+        Self::try_from_iter(data.into_iter().map(Ok))
+            .map_err(|err| anyhow!("Failed to create merkle tree from iter: {}", err))
     }
 
     /// Creates new merkle from a sequence of hashes.
     pub fn new_with_config<I: IntoIterator<Item = T>>(
         data: I,
         config: StoreConfig,
-    ) -> MerkleTree<T, A, K> {
-        Self::from_iter_with_config(data, config)
+    ) -> Result<MerkleTree<T, A, K>> {
+        Self::from_iter_with_config(data.into_iter().map(Ok), config)
+            .map_err(|err| anyhow!("Failed to create merkle tree from iter: {}", err))
     }
 
     /// Creates new merkle tree from a list of hashable objects.
-    pub fn from_data<O: Hashable<A>, I: IntoIterator<Item = O>>(data: I) -> MerkleTree<T, A, K> {
+    pub fn from_data<O: Hashable<A>, I: IntoIterator<Item = O>>(
+        data: I,
+    ) -> Result<MerkleTree<T, A, K>> {
         let mut a = A::default();
         Self::try_from_iter(data.into_iter().map(|x| {
             a.reset();
             x.hash(&mut a);
             Ok(a.hash())
         }))
-        .unwrap()
+        .map_err(|err| anyhow!("Failed to create merkle tree from iter: {}", err))
     }
 
     /// Creates new merkle tree from a list of hashable objects.
     pub fn from_data_with_config<O: Hashable<A>, I: IntoIterator<Item = O>>(
         data: I,
         config: StoreConfig,
-    ) -> MerkleTree<T, A, K> {
+    ) -> Result<MerkleTree<T, A, K>> {
         let mut a = A::default();
         Self::from_iter_with_config(
             data.into_iter().map(|x| {
                 a.reset();
                 x.hash(&mut a);
-                a.hash()
+                Ok(a.hash())
             }),
             config,
         )
+        .map_err(|err| anyhow!("failed to create merkle tree from data and config: {}", err))
     }
 
     /// Creates new merkle tree from an already allocated 'Store'
@@ -761,15 +765,6 @@ where
         I::Iter: IndexedParallelIterator;
 }
 
-pub trait FromIteratorWithConfig<T>
-where
-    T: Send,
-{
-    fn from_iter_with_config<I>(par_iter: I, config: StoreConfig) -> Self
-    where
-        I: IntoIterator<Item = T>;
-}
-
 // NOTE: This use cannot accept a StoreConfig.
 impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIndexedParallelIterator<T>
     for MerkleTree<T, A, K>
@@ -845,11 +840,14 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
 
         Self::build(data, leafs, log2_pow2(2 * pow))
     }
-}
 
-impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIteratorWithConfig<T> for MerkleTree<T, A, K> {
-    /// Creates new merkle tree from an iterator over hashable objects.
-    fn from_iter_with_config<I: IntoIterator<Item = T>>(into: I, config: StoreConfig) -> Self {
+    /// Attempts to create a new merkle tree using hashable objects yielded by
+    /// the provided iterator and store config. This method returns the first
+    /// error yielded by the iterator, if the iterator yielded an error.
+    pub fn from_iter_with_config<I: IntoIterator<Item = Result<T>>>(
+        into: I,
+        config: StoreConfig,
+    ) -> Result<Self> {
         let iter = into.into_iter();
 
         let leafs = iter.size_hint().1.unwrap();
@@ -859,24 +857,28 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> FromIteratorWithConfig<T> for Mer
         let height = log2_pow2(2 * pow);
 
         let mut data = K::new_with_config(get_merkle_tree_len(leafs), config)
-            .expect("Failed to create data store");
+            .map_err(|err| anyhow!("Failed to create data store: {}", err))?;
 
         // If the data store was loaded from disk, we know we have
         // access to the full merkle tree.
         if data.loaded_from_disk() {
-            let root = data.read_at(data.len() - 1).expect("Failed to read root");
-            return MerkleTree {
+            let root = data
+                .read_at(data.len() - 1)
+                .map_err(|err| anyhow!("Failed to read root: {}", err))?;
+
+            return Ok(MerkleTree {
                 data,
                 leafs,
                 height,
                 root,
                 _a: PhantomData,
                 _t: PhantomData,
-            };
+            });
         }
 
         populate_data::<T, A, K, I>(&mut data, iter).expect("Failed to populate data");
-        Self::build(data, leafs, height).expect("Failed to build")
+
+        Self::build(data, leafs, height)
     }
 }
 
