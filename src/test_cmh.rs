@@ -60,11 +60,12 @@ impl Algorithm<Item> for CMH {
 fn test_custom_merkle_hasher() {
     let mut a = CMH::new();
     let mt: MerkleTree<Item, CMH, VecStore<_>> =
-        MerkleTree::from_iter([1, 2, 3, 4, 5].iter().map(|x| {
+        MerkleTree::try_from_iter([1, 2, 3, 4, 5].iter().map(|x| {
             a.reset();
             x.hash(&mut a);
-            a.hash()
-        }));
+            Ok(a.hash())
+        }))
+        .unwrap();
 
     assert_eq!(
         mt.read_range(0, 3)

@@ -158,12 +158,14 @@ fn test_read_into() {
 #[test]
 fn test_from_iter() {
     let mut a = XOR128::new();
+
     let mt: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
-        MerkleTree::from_iter(["a", "b", "c"].iter().map(|x| {
+        MerkleTree::try_from_iter(["a", "b", "c"].iter().map(|x| {
             a.reset();
             x.hash(&mut a);
-            a.hash()
-        }));
+            Ok(a.hash())
+        }))
+        .unwrap();
     assert_eq!(mt.len(), 7);
     assert_eq!(mt.height(), 3);
 }
@@ -245,16 +247,17 @@ fn test_simple_tree() {
 
     for items in 2..8 {
         let mut a = XOR128::new();
-        let mt_base: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::from_iter(
+        let mt_base: MerkleTree<[u8; 16], XOR128, VecStore<_>> = MerkleTree::try_from_iter(
             [1, 2, 3, 4, 5, 6, 7, 8]
                 .iter()
                 .map(|x| {
                     a.reset();
                     x.hash(&mut a);
-                    a.hash()
+                    Ok(a.hash())
                 })
                 .take(items),
-        );
+        )
+        .unwrap();
 
         assert_eq!(mt_base.leafs(), items);
         assert_eq!(mt_base.height(), log2_pow2(next_pow2(mt_base.len())));
@@ -325,12 +328,13 @@ fn test_large_tree() {
     // shouldn't increase test times considerably.)
     for i in 0..100 {
         let mt_vec: MerkleTree<[u8; 16], XOR128, VecStore<_>> =
-            MerkleTree::from_iter((0..count).map(|x| {
+            MerkleTree::try_from_iter((0..count).map(|x| {
                 a.reset();
                 x.hash(&mut a);
                 i.hash(&mut a);
-                a.hash()
-            }));
+                Ok(a.hash())
+            }))
+            .unwrap();
         assert_eq!(mt_vec.len(), 2 * count - 1);
 
         let mt_disk: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
