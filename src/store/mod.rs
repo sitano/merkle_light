@@ -154,7 +154,7 @@ pub trait Store<E: Element>: std::fmt::Debug + Send + Sync + Sized {
     // position in `E` sizes (*not* in `u8`).
     fn copy_from_slice(&mut self, buf: &[u8], start: usize) -> Result<()>;
 
-    // compact/shrink resource uses where possible.
+    // compact/shrink resources used where possible.
     fn compact(&mut self, config: StoreConfig, store_version: u32) -> Result<bool>;
     // re-instate resource usage where needed.
     fn reinit(&mut self) -> Result<()> {

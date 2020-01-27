@@ -382,6 +382,8 @@ fn test_large_tree_disk() {
 }
 
 fn test_mmap_tree() {
+    use std::{thread, time};
+
     let mut a = XOR128::new();
     let count = SMALL_TREE_BUILD * SMALL_TREE_BUILD * 128;
 
@@ -396,11 +398,11 @@ fn test_mmap_tree() {
     assert_eq!(mt_map.len(), 2 * count - 1);
 
     let config = {
-        let temp_dir = tempdir::TempDir::new("test_level_cache_tree_v1").unwrap();
+        let temp_dir = tempdir::TempDir::new("test_mmap_tree").unwrap();
         let temp_path = temp_dir.path();
         StoreConfig::new(
             &temp_path,
-            String::from("test-mmap_tree"),
+            String::from("test-mmap-tree"),
             StoreConfig::default_cached_above_base_layer(count),
         )
     };
@@ -409,9 +411,11 @@ fn test_mmap_tree() {
     thread::sleep(time::Duration::from_secs(5));
 
     println!("Compacting ...");
-    mt_map.compact(config.clone(), 1);
+    let res = mt_map
+        .compact(config.clone(), 1)
+        .expect("Compaction failed");
+    assert_eq!(res, true);
 
-    use std::{thread, time};
     println!("Sleeping ... (reduced mem usage is visible)");
     thread::sleep(time::Duration::from_secs(10));
 
