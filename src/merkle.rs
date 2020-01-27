@@ -455,6 +455,11 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>> MerkleTree<T, A, K> {
         self.data.compact(config, store_version)
     }
 
+    #[inline]
+    pub fn reinit(&mut self) -> Result<()> {
+        self.data.reinit()
+    }
+
     /// Removes the backing store for this merkle tree.
     #[inline]
     pub fn delete(&self, config: StoreConfig) -> Result<()> {

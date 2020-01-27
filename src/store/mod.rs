@@ -153,7 +153,13 @@ pub trait Store<E: Element>: std::fmt::Debug + Send + Sync + Sized {
     // `buf` is a slice of converted `E`s and `start` is its
     // position in `E` sizes (*not* in `u8`).
     fn copy_from_slice(&mut self, buf: &[u8], start: usize) -> Result<()>;
+
+    // compact/shrink resource uses where possible.
     fn compact(&mut self, config: StoreConfig, store_version: u32) -> Result<bool>;
+    // re-instate resource usage where needed.
+    fn reinit(&mut self) -> Result<()> {
+        Ok(())
+    }
 
     // Removes the store backing (does not require a mutable reference
     // since the config should provide stateless context to what's
