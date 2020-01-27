@@ -32,6 +32,9 @@ pub const SMALL_TREE_BUILD: usize = 1024;
 // Number of nodes to process in parallel during the `build` stage.
 pub const BUILD_CHUNK_NODES: usize = 1024 * 4;
 
+mod mmap;
+pub use mmap::MmapStore;
+
 // Version 1 always contained the base layer data (even after 'compact').
 // Version 2 no longer contains the base layer data after compact.
 #[derive(Clone, Copy, Debug)]
@@ -133,9 +136,7 @@ impl<R: Read + Send + Sync> fmt::Debug for ExternalReader<R> {
 }
 
 /// Backing store of the merkle tree.
-pub trait Store<E: Element>:
-    ops::Deref<Target = [E]> + std::fmt::Debug + Clone + Send + Sync
-{
+pub trait Store<E: Element>: std::fmt::Debug + Send + Sync + Sized {
     /// Creates a new store which can store up to `size` elements.
     fn new_with_config(size: usize, config: StoreConfig) -> Result<Self>;
     fn new(size: usize) -> Result<Self>;
@@ -478,14 +479,6 @@ pub struct DiskStore<E: Element> {
     store_size: usize,
 }
 
-impl<E: Element> ops::Deref for DiskStore<E> {
-    type Target = [E];
-
-    fn deref(&self) -> &Self::Target {
-        unimplemented!()
-    }
-}
-
 impl<E: Element> Store<E> for DiskStore<E> {
     fn new_with_config(size: usize, config: StoreConfig) -> Result<Self> {
         let data_path = StoreConfig::data_path(&config.path, &config.id);
@@ -515,7 +508,6 @@ impl<E: Element> Store<E> for DiskStore<E> {
         })
     }
 
-    #[allow(unsafe_code)]
     fn new(size: usize) -> Result<Self> {
         let store_size = E::byte_len() * size;
         let file = tempfile()?;
@@ -924,15 +916,6 @@ impl<E: Element> DiskStore<E> {
     }
 }
 
-// FIXME: Fake `Clone` implementation to accommodate the artificial call in
-//  `from_data_with_store`, we won't actually duplicate the mmap memory,
-//  just recreate the same object (as the original will be dropped).
-impl<E: Element> Clone for DiskStore<E> {
-    fn clone(&self) -> DiskStore<E> {
-        unimplemented!("We can't clone a store with an already associated file");
-    }
-}
-
 /// The LevelCacheStore is used to reduce the on-disk footprint even
 /// further to the minimum at the cost of build time performance.
 /// Each LevelCacheStore is created with a StoreConfig object which
@@ -1041,14 +1024,6 @@ impl<E: Element, R: Read + Send + Sync> LevelCacheStore<E, R> {
         // If we're using an external reader, check that the data on
         // disk is only the cached elements.
         Ok(self.store_size == cache_size)
-    }
-}
-
-impl<E: Element, R: Read + Send + Sync> ops::Deref for LevelCacheStore<E, R> {
-    type Target = [E];
-
-    fn deref(&self) -> &Self::Target {
-        unimplemented!()
     }
 }
 
@@ -1344,15 +1319,6 @@ impl<E: Element, R: Read + Send + Sync> LevelCacheStore<E, R> {
 
     pub fn store_copy_from_slice(&mut self, _start: usize, _slice: &[u8]) {
         unimplemented!("Not supported by the LevelCacheStore");
-    }
-}
-
-// FIXME: Fake `Clone` implementation to accommodate the artificial call in
-//  `from_data_with_store`, we won't actually duplicate the mmap memory,
-//  just recreate the same object (as the original will be dropped).
-impl<E: Element, R: Read + Send + Sync> Clone for LevelCacheStore<E, R> {
-    fn clone(&self) -> LevelCacheStore<E, R> {
-        unimplemented!("We can't clone a store with an already associated file");
     }
 }
 
