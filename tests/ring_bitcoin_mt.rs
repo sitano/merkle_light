@@ -2,8 +2,6 @@
 #![cfg(feature = "bitcoin")]
 
 use merkletree::hash::{Algorithm, Hashable};
-use merkletree::merkle::MerkleTree;
-use merkletree::store::VecStore;
 use ring::digest::{Context, SHA256};
 use std::fmt;
 use std::hash::Hasher;
@@ -120,6 +118,7 @@ fn test_ring_bitcoin_leaf_hash() {
 }
 
 /*
+/// Pow2 leafs only supported.
 /// [](http://chimera.labs.oreilly.com/books/1234000001802/ch07.html#merkle_trees)
 #[test]
 fn test_ring_bitcoin_node() {

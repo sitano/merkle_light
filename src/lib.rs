@@ -134,11 +134,13 @@
 //!     let mut h1 = [0u8; 32];
 //!     let mut h2 = [0u8; 32];
 //!     let mut h3 = [0u8; 32];
+//!     let mut h4 = [0u8; 32];
 //!     h1[0] = 0x11;
 //!     h2[0] = 0x22;
 //!     h3[0] = 0x33;
+//!     h4[0] = 0x44;
 //!
-//!     let t: MerkleTree<[u8; 32], ExampleAlgorithm, VecStore<_>> = MerkleTree::try_from_iter(vec![h1, h2, h3].into_iter().map(Ok)).unwrap();
+//!     let t: MerkleTree<[u8; 32], ExampleAlgorithm, VecStore<_>> = MerkleTree::try_from_iter(vec![h1, h2, h3, h4].into_iter().map(Ok)).unwrap();
 //!     println!("{:?}", t.root());
 //! }
 //! }
