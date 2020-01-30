@@ -32,6 +32,9 @@ pub const SMALL_TREE_BUILD: usize = 1024;
 // Number of nodes to process in parallel during the `build` stage.
 pub const BUILD_CHUNK_NODES: usize = 1024 * 4;
 
+mod mmap;
+pub use mmap::MmapStore;
+
 // Version 1 always contained the base layer data (even after 'compact').
 // Version 2 no longer contains the base layer data after compact.
 #[derive(Clone, Copy, Debug)]
@@ -133,9 +136,7 @@ impl<R: Read + Send + Sync> fmt::Debug for ExternalReader<R> {
 }
 
 /// Backing store of the merkle tree.
-pub trait Store<E: Element>:
-    ops::Deref<Target = [E]> + std::fmt::Debug + Clone + Send + Sync
-{
+pub trait Store<E: Element>: std::fmt::Debug + Send + Sync + Sized {
     /// Creates a new store which can store up to `size` elements.
     fn new_with_config(size: usize, config: StoreConfig) -> Result<Self>;
     fn new(size: usize) -> Result<Self>;
@@ -152,7 +153,13 @@ pub trait Store<E: Element>:
     // `buf` is a slice of converted `E`s and `start` is its
     // position in `E` sizes (*not* in `u8`).
     fn copy_from_slice(&mut self, buf: &[u8], start: usize) -> Result<()>;
+
+    // compact/shrink resources used where possible.
     fn compact(&mut self, config: StoreConfig, store_version: u32) -> Result<bool>;
+    // re-instate resource usage where needed.
+    fn reinit(&mut self) -> Result<()> {
+        Ok(())
+    }
 
     // Removes the store backing (does not require a mutable reference
     // since the config should provide stateless context to what's
@@ -169,7 +176,6 @@ pub trait Store<E: Element>:
     fn loaded_from_disk(&self) -> bool;
     fn is_empty(&self) -> bool;
     fn push(&mut self, el: E) -> Result<()>;
-    fn set_len(&mut self, len: usize);
     fn last(&self) -> Result<E> {
         self.read_at(self.len() - 1)
     }
@@ -451,10 +457,6 @@ impl<E: Element> Store<E> for VecStore<E> {
         self.0.push(el);
         Ok(())
     }
-
-    fn set_len(&mut self, _len: usize) {
-        unimplemented!("Cannot set the length on this type of store");
-    }
 }
 
 /// The Disk-only store is used to reduce memory to the minimum at the
@@ -476,14 +478,6 @@ pub struct DiskStore<E: Element> {
     // Not to be confused with `len`, this saves the total size of the `store`
     // in bytes and the other one keeps track of used `E` slots in the `DiskStore`.
     store_size: usize,
-}
-
-impl<E: Element> ops::Deref for DiskStore<E> {
-    type Target = [E];
-
-    fn deref(&self) -> &Self::Target {
-        unimplemented!()
-    }
 }
 
 impl<E: Element> Store<E> for DiskStore<E> {
@@ -515,7 +509,6 @@ impl<E: Element> Store<E> for DiskStore<E> {
         })
     }
 
-    #[allow(unsafe_code)]
     fn new(size: usize) -> Result<Self> {
         let store_size = E::byte_len() * size;
         let file = tempfile()?;
@@ -758,14 +751,11 @@ impl<E: Element> Store<E> for DiskStore<E> {
         self.write_at(el, len)
     }
 
-    fn set_len(&mut self, len: usize) {
-        self.len = len;
-    }
-
     fn sync(&self) -> Result<()> {
         self.file.sync_all().context("failed to sync file")
     }
 
+    #[allow(unsafe_code)]
     fn process_layer<A: Algorithm<E>>(
         &mut self,
         width: usize,
@@ -876,6 +866,10 @@ impl<E: Element> Store<E> for DiskStore<E> {
 }
 
 impl<E: Element> DiskStore<E> {
+    fn set_len(&mut self, len: usize) {
+        self.len = len;
+    }
+
     pub fn store_size(&self) -> usize {
         self.store_size
     }
@@ -921,15 +915,6 @@ impl<E: Element> DiskStore<E> {
         self.file.write_all_at(start as u64, slice)?;
 
         Ok(())
-    }
-}
-
-// FIXME: Fake `Clone` implementation to accommodate the artificial call in
-//  `from_data_with_store`, we won't actually duplicate the mmap memory,
-//  just recreate the same object (as the original will be dropped).
-impl<E: Element> Clone for DiskStore<E> {
-    fn clone(&self) -> DiskStore<E> {
-        unimplemented!("We can't clone a store with an already associated file");
     }
 }
 
@@ -1041,14 +1026,6 @@ impl<E: Element, R: Read + Send + Sync> LevelCacheStore<E, R> {
         // If we're using an external reader, check that the data on
         // disk is only the cached elements.
         Ok(self.store_size == cache_size)
-    }
-}
-
-impl<E: Element, R: Read + Send + Sync> ops::Deref for LevelCacheStore<E, R> {
-    type Target = [E];
-
-    fn deref(&self) -> &Self::Target {
-        unimplemented!()
     }
 }
 
@@ -1234,10 +1211,6 @@ impl<E: Element, R: Read + Send + Sync> Store<E> for LevelCacheStore<E, R> {
         self.write_at(el, len)
     }
 
-    fn set_len(&mut self, _len: usize) {
-        unimplemented!("Cannot set the length on this type of store");
-    }
-
     fn sync(&self) -> Result<()> {
         self.file.sync_all().context("failed to sync file")
     }
@@ -1344,15 +1317,6 @@ impl<E: Element, R: Read + Send + Sync> LevelCacheStore<E, R> {
 
     pub fn store_copy_from_slice(&mut self, _start: usize, _slice: &[u8]) {
         unimplemented!("Not supported by the LevelCacheStore");
-    }
-}
-
-// FIXME: Fake `Clone` implementation to accommodate the artificial call in
-//  `from_data_with_store`, we won't actually duplicate the mmap memory,
-//  just recreate the same object (as the original will be dropped).
-impl<E: Element, R: Read + Send + Sync> Clone for LevelCacheStore<E, R> {
-    fn clone(&self) -> LevelCacheStore<E, R> {
-        unimplemented!("We can't clone a store with an already associated file");
     }
 }
 

@@ -5,7 +5,7 @@ use crate::merkle::FromIndexedParallelIterator;
 use crate::merkle::{log2_pow2, next_pow2};
 use crate::merkle::{Element, MerkleTree};
 use crate::store::{
-    DiskStore, DiskStoreProducer, ExternalReader, LevelCacheStore, Store, StoreConfig,
+    DiskStore, DiskStoreProducer, ExternalReader, LevelCacheStore, MmapStore, Store, StoreConfig,
     StoreConfigDataVersion, VecStore, DEFAULT_CACHED_ABOVE_BASE_LAYER, SMALL_TREE_BUILD,
 };
 use rayon::iter::{plumbing::*, IntoParallelIterator, ParallelIterator};
@@ -341,6 +341,16 @@ fn test_large_tree() {
             .unwrap();
         assert_eq!(mt_vec.len(), 2 * count - 1);
 
+        let mt_map: MerkleTree<[u8; 16], XOR128, MmapStore<_>> =
+            MerkleTree::try_from_iter((0..count).map(|x| {
+                a.reset();
+                x.hash(&mut a);
+                i.hash(&mut a);
+                Ok(a.hash())
+            }))
+            .unwrap();
+        assert_eq!(mt_map.len(), 2 * count - 1);
+
         let mt_disk: MerkleTree<[u8; 16], XOR128, DiskStore<_>> =
             MerkleTree::from_par_iter((0..count).into_par_iter().map(|x| {
                 let mut xor_128 = a.clone();
@@ -369,6 +379,53 @@ fn test_large_tree_disk() {
         }))
         .unwrap();
     assert_eq!(mt_disk.len(), 2 * count - 1);
+}
+
+#[test]
+fn test_mmap_tree() {
+    use std::{thread, time};
+
+    let mut a = XOR128::new();
+    let count = SMALL_TREE_BUILD * SMALL_TREE_BUILD * 128;
+
+    let mut mt_map: MerkleTree<[u8; 16], XOR128, MmapStore<_>> =
+        MerkleTree::try_from_iter((0..count).map(|x| {
+            a.reset();
+            x.hash(&mut a);
+            93.hash(&mut a);
+            Ok(a.hash())
+        }))
+        .unwrap();
+    assert_eq!(mt_map.len(), 2 * count - 1);
+
+    let config = {
+        let temp_dir = tempdir::TempDir::new("test_mmap_tree").unwrap();
+        let temp_path = temp_dir.path();
+        StoreConfig::new(
+            &temp_path,
+            String::from("test-mmap-tree"),
+            StoreConfig::default_cached_above_base_layer(count),
+        )
+    };
+
+    println!("Sleeping ... (high mem usage is visible)");
+    thread::sleep(time::Duration::from_secs(5));
+
+    println!("Compacting ...");
+    let res = mt_map
+        .compact(config.clone(), 1)
+        .expect("Compaction failed");
+    assert_eq!(res, true);
+
+    println!("Sleeping ... (reduced mem usage is visible)");
+    thread::sleep(time::Duration::from_secs(10));
+
+    mt_map.reinit().expect("Failed to re-init the mmap");
+
+    for i in 0..100 {
+        let p = mt_map.gen_proof(i * (count / 100)).unwrap();
+        assert!(p.validate::<XOR128>());
+    }
 }
 
 #[test]
