@@ -207,7 +207,9 @@ impl<E: Element> Store<E> for MmapStore<E> {
         ensure!(start < len, "start out of range {} >= {}", start, len);
         ensure!(end <= len, "end out of range {} > {}", end, len);
 
-        Ok(buf.copy_from_slice(&self.map.as_deref().unwrap()[start..end]))
+        buf.copy_from_slice(&self.map.as_deref().unwrap()[start..end]);
+
+        Ok(())
     }
 
     fn read_range_into(&self, _start: usize, _end: usize, _buf: &mut [u8]) -> Result<()> {
@@ -239,13 +241,9 @@ impl<E: Element> Store<E> for MmapStore<E> {
     }
 
     fn compact(&mut self, _config: StoreConfig, _store_version: u32) -> Result<bool> {
-        if self.map.is_none() {
-            return Ok(false);
-        }
+        let map = self.map.take();
 
-        self.map = None;
-
-        return Ok(true);
+        Ok(map.is_some())
     }
 
     #[allow(unsafe_code)]

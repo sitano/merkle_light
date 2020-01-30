@@ -381,6 +381,7 @@ fn test_large_tree_disk() {
     assert_eq!(mt_disk.len(), 2 * count - 1);
 }
 
+#[test]
 fn test_mmap_tree() {
     use std::{thread, time};
 

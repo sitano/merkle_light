@@ -176,7 +176,6 @@ pub trait Store<E: Element>: std::fmt::Debug + Send + Sync + Sized {
     fn loaded_from_disk(&self) -> bool;
     fn is_empty(&self) -> bool;
     fn push(&mut self, el: E) -> Result<()>;
-    fn set_len(&mut self, len: usize);
     fn last(&self) -> Result<E> {
         self.read_at(self.len() - 1)
     }
@@ -457,10 +456,6 @@ impl<E: Element> Store<E> for VecStore<E> {
     fn push(&mut self, el: E) -> Result<()> {
         self.0.push(el);
         Ok(())
-    }
-
-    fn set_len(&mut self, _len: usize) {
-        unimplemented!("Cannot set the length on this type of store");
     }
 }
 
@@ -756,14 +751,11 @@ impl<E: Element> Store<E> for DiskStore<E> {
         self.write_at(el, len)
     }
 
-    fn set_len(&mut self, len: usize) {
-        self.len = len;
-    }
-
     fn sync(&self) -> Result<()> {
         self.file.sync_all().context("failed to sync file")
     }
 
+    #[allow(unsafe_code)]
     fn process_layer<A: Algorithm<E>>(
         &mut self,
         width: usize,
@@ -874,6 +866,10 @@ impl<E: Element> Store<E> for DiskStore<E> {
 }
 
 impl<E: Element> DiskStore<E> {
+    fn set_len(&mut self, len: usize) {
+        self.len = len;
+    }
+
     pub fn store_size(&self) -> usize {
         self.store_size
     }
@@ -1213,10 +1209,6 @@ impl<E: Element, R: Read + Send + Sync> Store<E> for LevelCacheStore<E, R> {
         );
 
         self.write_at(el, len)
-    }
-
-    fn set_len(&mut self, _len: usize) {
-        unimplemented!("Cannot set the length on this type of store");
     }
 
     fn sync(&self) -> Result<()> {
