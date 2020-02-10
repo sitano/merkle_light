@@ -332,11 +332,12 @@ impl<E: Element> Store<E> for DiskStore<E> {
         }?;
 
         let data_lock = Arc::new(RwLock::new(self));
+        let write_chunk_width = (BUILD_CHUNK_NODES >> 1) * E::byte_len();
 
         debug_assert_eq!(BUILD_CHUNK_NODES % 2, 0);
         Vec::from_iter((read_start..read_start + width).step_by(BUILD_CHUNK_NODES))
             .into_par_iter()
-            .zip(mmap.par_chunks_mut(BUILD_CHUNK_NODES * E::byte_len()))
+            .zip(mmap.par_chunks_mut(write_chunk_width))
             .try_for_each(|(chunk_index, write_mmap)| -> Result<()> {
                 let chunk_size = std::cmp::min(BUILD_CHUNK_NODES, read_start + width - chunk_index);
 
