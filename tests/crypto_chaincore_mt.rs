@@ -77,6 +77,7 @@ impl<'a> fmt::Display for HexSlice<'a> {
 }
 
 /*
+// Pow2 leafs is now required
 #[test]
 fn test_crypto_chaincore_node() {
     let mut h1 = [0u8; 32];
@@ -104,9 +105,10 @@ fn test_merkle_tree_validate_data() {
         MerkleTree::from_data(data).unwrap();
     let generated_proof = t.gen_proof(0).unwrap();
 
-    let proof = Proof::new(
+    let proof: Proof<CryptoSHA256Hash> = Proof::new(
         generated_proof.lemma().to_owned(),
         generated_proof.path().to_owned(),
-    );
+    )
+    .unwrap();
     assert!(proof.validate_with_data::<CryptoChainCoreAlgorithm>(&proof_item));
 }

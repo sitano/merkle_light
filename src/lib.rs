@@ -174,16 +174,25 @@ pub mod store;
 /// Merkle tree inclusion proof.
 pub mod proof;
 
+/// Compound Merkle tree inclusion proof.
+pub mod compound_merkle_proof;
+
 /// Merkle tree abstractions, implementation and algorithms.
 pub mod merkle;
 
-/// Tests data.
-#[cfg(test)]
-mod test_item;
+/// Compound Merkle tree abstractions, implementation and algorithms.
+pub mod compound_merkle;
+
+/// Re-usable Testing primitives
+pub mod test_common;
 
 /// Tests XOR128.
 #[cfg(test)]
 mod test_xor128;
+
+/// Tests data.
+#[cfg(test)]
+mod test_item;
 
 /// Tests SIP.
 #[cfg(test)]

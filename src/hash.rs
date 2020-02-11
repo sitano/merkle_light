@@ -140,4 +140,14 @@ where
         self.write(right.as_ref());
         self.hash()
     }
+
+    /// Returns hash value for MT interior node (prefix 0x01).
+    #[inline]
+    fn multi_node(&mut self, nodes: &[T], _height: usize) -> T {
+        self.write(&[INTERIOR]);
+        for node in nodes {
+            self.write(node.as_ref());
+        }
+        self.hash()
+    }
 }
