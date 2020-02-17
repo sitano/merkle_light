@@ -935,20 +935,10 @@ pub fn get_merkle_tree_leafs(len: usize, branches: usize) -> usize {
     leafs
 }
 
-/// `next_pow2` returns next highest power of two from a given number if
-/// it is not already a power of two.
-///
-/// [](http://locklessinc.com/articles/next_pow2/)
-/// [](https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2/466242#466242)
-pub fn next_pow2(mut n: usize) -> usize {
-    n -= 1;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    n |= n >> 32;
-    n + 1
+/// returns next highest power of two from a given number if it is not
+/// already a power of two.
+pub fn next_pow2(n: usize) -> usize {
+    n.next_power_of_two()
 }
 
 /// find power of 2 of a number which is power of 2

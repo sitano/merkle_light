@@ -107,7 +107,7 @@ impl StoreConfig {
         let height = get_merkle_tree_height(leafs, branches);
         if height < 2 {
             0
-        } else if height < DEFAULT_CACHED_ABOVE_BASE_LAYER {
+        } else if height <= DEFAULT_CACHED_ABOVE_BASE_LAYER {
             2
         } else {
             DEFAULT_CACHED_ABOVE_BASE_LAYER
