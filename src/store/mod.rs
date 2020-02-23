@@ -124,7 +124,7 @@ impl StoreConfig {
     // above the base should be sufficient.
     pub fn default_cached_above_base_layer(leafs: usize, branches: usize) -> usize {
         let height = get_merkle_tree_height(leafs, branches);
-        if height < 2 {
+        if height <= 2 {
             return 0;
         }
 

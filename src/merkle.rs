@@ -126,20 +126,28 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>, U: Unsigned> MerkleTree<T, A, K, 
     /// Creates new merkle tree from an already allocated 'Store'
     /// (used with 'Store::new_from_disk').  The specified 'size' is
     /// the number of base data leafs in the MT.
-    pub fn from_data_store(data: K, size: usize) -> Result<MerkleTree<T, A, K, U>> {
+    pub fn from_data_store(data: K, leafs: usize) -> Result<MerkleTree<T, A, K, U>> {
         let branches = U::to_usize();
-        ensure!(next_pow2(size) == size, "size MUST be a power of 2");
+        ensure!(next_pow2(leafs) == leafs, "leafs MUST be a power of 2");
         ensure!(
             next_pow2(branches) == branches,
             "branches MUST be a power of 2"
         );
 
-        let height = get_merkle_tree_height(size, branches);
+        let tree_len = get_merkle_tree_len(leafs, branches);
+        ensure!(tree_len == data.len(), "Inconsistent tree data");
+
+        ensure!(
+            is_merkle_tree_size_valid(leafs, branches),
+            "MerkleTree size is invalid given the arity"
+        );
+
+        let height = get_merkle_tree_height(leafs, branches);
         let root = data.read_at(data.len() - 1)?;
 
         Ok(MerkleTree {
             data,
-            leafs: size,
+            leafs,
             height,
             root,
             _u: PhantomData,
@@ -156,6 +164,11 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>, U: Unsigned> MerkleTree<T, A, K, 
         ensure!(
             tree_len == data.len() / T::byte_len(),
             "Inconsistent tree data"
+        );
+
+        ensure!(
+            is_merkle_tree_size_valid(leafs, branches),
+            "MerkleTree size is invalid given the arity"
         );
 
         let store = K::new_from_slice(tree_len, &data).context("failed to create data store")?;
@@ -186,6 +199,11 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>, U: Unsigned> MerkleTree<T, A, K, 
             "Inconsistent tree data"
         );
 
+        ensure!(
+            is_merkle_tree_size_valid(leafs, branches),
+            "MerkleTree size is invalid given the arity"
+        );
+
         let store = K::new_from_slice_with_config(tree_len, branches, &data, config)
             .context("failed to create data store")?;
         let root = store.read_at(data.len() - 1)?;
@@ -208,6 +226,15 @@ impl<T: Element, A: Algorithm<T>, K: Store<T>, U: Unsigned> MerkleTree<T, A, K, 
         height: usize,
     ) -> Result<MerkleTree<T, A, VecStore<T>, U>> {
         let root = VecStore::build::<A, U>(&mut data, leafs, height, None)?;
+        let branches = U::to_usize();
+
+        let tree_len = get_merkle_tree_len(leafs, branches);
+        ensure!(tree_len == Store::len(&data), "Inconsistent tree data");
+
+        ensure!(
+            is_merkle_tree_size_valid(leafs, branches),
+            "MerkleTree size is invalid given the arity"
+        );
 
         Ok(MerkleTree {
             data,
@@ -901,6 +928,20 @@ pub fn get_merkle_tree_cache_size(leafs: usize, branches: usize, levels: usize) 
     }
 
     cache_size
+}
+
+pub fn is_merkle_tree_size_valid(leafs: usize, branches: usize) -> bool {
+    let mut cur = leafs;
+    let shift = log2_pow2(branches);
+    while cur != 1 {
+        cur >>= shift; // cur /= branches
+        assert!(cur < leafs);
+        if cur == 0 {
+            return false;
+        }
+    }
+
+    true
 }
 
 // Height calculation given the number of leafs in the tree and the branches.
