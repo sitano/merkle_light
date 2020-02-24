@@ -17,7 +17,9 @@ use typenum::marker_traits::Unsigned;
 use crate::hash::Algorithm;
 use crate::merkle::{get_merkle_tree_height, log2_pow2, next_pow2, Element};
 
-pub const DEFAULT_CACHED_ABOVE_BASE_LAYER: usize = 7;
+pub const DEFAULT_CACHED_ABOVE_BASE_LAYER_BINARY: usize = 7;
+pub const DEFAULT_CACHED_ABOVE_BASE_LAYER_QUAD: usize = 4;
+pub const DEFAULT_CACHED_ABOVE_BASE_LAYER_OCT: usize = 2;
 
 /// Tree size (number of nodes) used as threshold to decide which build algorithm
 /// to use. Small trees (below this value) use the old build algorithm, optimized
@@ -122,12 +124,20 @@ impl StoreConfig {
     // above the base should be sufficient.
     pub fn default_cached_above_base_layer(leafs: usize, branches: usize) -> usize {
         let height = get_merkle_tree_height(leafs, branches);
-        if height < 2 {
-            0
-        } else if height <= DEFAULT_CACHED_ABOVE_BASE_LAYER {
+        if height <= 2 {
+            return 0;
+        }
+
+        let default_height = match branches {
+            2 => DEFAULT_CACHED_ABOVE_BASE_LAYER_BINARY,
+            4 => DEFAULT_CACHED_ABOVE_BASE_LAYER_QUAD,
+            _ => DEFAULT_CACHED_ABOVE_BASE_LAYER_OCT,
+        };
+
+        if height <= default_height {
             2
         } else {
-            DEFAULT_CACHED_ABOVE_BASE_LAYER
+            default_height
         }
     }
 

@@ -472,6 +472,12 @@ fn test_octo_from_iter() {
 }
 
 #[test]
+fn test_large_octo_from_iter() {
+    let (leafs, len, height, num_challenges) = { (16777216, 19173961, 9, 1024) };
+    test_vec_tree_from_iter::<U8>(leafs, len, height, num_challenges);
+}
+
+#[test]
 fn test_large_octo_with_disk_store() {
     let (leafs, len, height, num_challenges) = { (2097152, 2396745, 8, 2048) };
     test_disk_tree_from_iter::<U8>(leafs, len, height, num_challenges);
