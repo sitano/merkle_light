@@ -22,12 +22,14 @@ commands:
     parameters:
       target:
         type: string
+      command:
+        type: string
     steps:
       - *restore-workspace
       - *restore-cache
       - run:
-          name: Test (<< parameters.target >>)
-          command: TARGET=<< parameters.target >> cargo test --release
+          name: Test (<< parameters.target >> << parameters.command >>)
+          command: TARGET=<< parameters.target >> << parameters.command >> 
           no_output_timeout: 15m
 
 jobs:
@@ -64,6 +66,14 @@ jobs:
     steps:
       - test_target:
           target: "x86_64-unknown-linux-gnu"
+          command: "cargo test --release"
+
+  test_x86_64-unknown-linux-gnu-ignored:
+    executor: default
+    steps:
+      - test_target:
+          target: "x86_64-unknown-linux-gnu"
+          command: "cargo test --release -- --ignored"
 
   rustfmt:
     executor: default
@@ -123,6 +133,9 @@ workflows:
           requires:
             - cargo_fetch
       - test_x86_64-unknown-linux-gnu:
+          requires:
+            - cargo_fetch
+      - test_x86_64-unknown-linux-gnu-ignored:
           requires:
             - cargo_fetch
       - build:
