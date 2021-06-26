@@ -36,7 +36,7 @@ Documentation is [available](https://sitano.github.io/merkle_light/merkle_light/
 
 # Quick start
 
-```
+```rust
 extern crate crypto;
 extern crate merkle_light;
 
