@@ -67,7 +67,7 @@ fn hash_field(index: usize, f: &syn::Field) -> quote::Tokens {
             syn::Ty::Rptr(_, bty) => {
                 ty = bty.ty.clone();
             }
-            _ => panic!(format!("hashing not supported: {:?}", ty)),
+            _ => panic!("hashing not supported: {:?}", ty),
         };
     }
 
