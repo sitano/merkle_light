@@ -3,7 +3,7 @@
 
 use std::slice;
 use std::mem;
-use hash::{Hashable, Algorithm};
+use crate::hash::{Hashable, Algorithm};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Debug)]
 pub struct Item(pub u64);

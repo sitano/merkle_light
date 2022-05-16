@@ -1,7 +1,11 @@
-use hash::Hashable;
-use std::hash::Hasher;
-use std::mem;
-use std::slice;
+extern crate alloc;
+
+use alloc::vec::Vec;
+use alloc::string::String;
+use core::hash::Hasher;
+use core::mem;
+use core::slice;
+use crate::hash::Hashable;
 
 macro_rules! impl_write {
     ($(($ty:ident, $meth:ident),)*) => {$(

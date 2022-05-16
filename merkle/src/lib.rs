@@ -152,6 +152,7 @@
     unsafe_code, unstable_features,
     unused_import_braces
 )]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #![cfg_attr(feature="nightly", allow(unstable_features))]
 

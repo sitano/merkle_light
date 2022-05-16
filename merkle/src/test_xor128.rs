@@ -1,9 +1,9 @@
 #![cfg(test)]
 
-use hash::*;
-use merkle::MerkleTree;
-use merkle::next_pow2;
-use merkle::log2_pow2;
+use crate::hash::*;
+use crate::merkle::MerkleTree;
+use crate::merkle::next_pow2;
+use crate::merkle::log2_pow2;
 use std::fmt;
 use std::hash::Hasher;
 use std::iter::FromIterator;

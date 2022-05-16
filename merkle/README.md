@@ -10,7 +10,7 @@
 ## Features
 
 - external dependency agnostic
-- `std::hash::Hasher` compatibility
+- `core::hash::Hasher` compatibility
 - standard types hasher implementations
 - `#[derive(Hashable)]` support for simple struct
 - customizable merkle leaf/node hashing algorithm
