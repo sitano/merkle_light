@@ -1,8 +1,11 @@
-use hash::{Hashable, Algorithm};
-use proof::Proof;
-use std::iter::FromIterator;
-use std::marker::PhantomData;
-use std::ops;
+extern crate alloc;
+
+use alloc::vec::Vec;
+use core::iter::FromIterator;
+use core::marker::PhantomData;
+use core::ops;
+use crate::hash::{Hashable, Algorithm};
+use crate::proof::Proof;
 
 /// Merkle Tree.
 ///
@@ -219,7 +222,10 @@ pub fn next_pow2(mut n: usize) -> usize {
     n |= n >> 4;
     n |= n >> 8;
     n |= n >> 16;
-    n |= n >> 32;
+    #[cfg(target_pointer_width = "64")]
+    {
+        n |= n >> 32;
+    }
     n + 1
 }
 

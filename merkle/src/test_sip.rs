@@ -1,13 +1,13 @@
 #![cfg(test)]
 
-use hash::{Hashable, Algorithm};
-use merkle::MerkleTree;
-use merkle::next_pow2;
-use merkle::log2_pow2;
+use crate::hash::{Hashable, Algorithm};
+use crate::merkle::MerkleTree;
+use crate::merkle::next_pow2;
+use crate::merkle::log2_pow2;
+use crate::test_item::Item;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::iter::FromIterator;
-use test_item::Item;
 
 impl Algorithm<Item> for DefaultHasher {
     #[inline]

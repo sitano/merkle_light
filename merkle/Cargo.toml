@@ -1,9 +1,10 @@
 [package]
 name = "merkle_light"
-version = "0.3.1"
+version = "0.4.0"
 authors = [
   "Ivan Prisyazhnyy <john.koepi@gmail.com>"
 ]
+edition = "2021"
 
 description   = "Light merkle tree implementation with SPV support and dependency agnostic."
 license       = "BSD-3-Clause"
@@ -11,7 +12,7 @@ homepage      = "https://github.com/sitano/merkle_light"
 repository    = "https://github.com/sitano/merkle_light"
 documentation = "https://sitano.github.io/merkle_light/merkle_light/index.html"
 readme        = "README.md"
-keywords      = ["merkle", "merkle-tree"]
+keywords      = ["merkle", "merkle-tree", "no_std"]
 categories    = ["data-structures", "cryptography"]
 
 [dependencies]
@@ -23,7 +24,8 @@ rand = { version = "^0.8.5", optional = true }
 [dev-dependencies]
 
 [features]
-default = []
+default = ["std"]
+std = []
 bitcoin = ["ring", "rust-crypto"]
 chaincore = ["rust-crypto"]
 crypto_bench = ["rust-crypto", "ring", "rand"]

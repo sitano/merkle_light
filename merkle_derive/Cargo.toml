@@ -1,9 +1,10 @@
 [package]
 name = "merkle_light_derive"
-version = "0.3.1"
+version = "0.4.0"
 authors = [
   "Ivan Prisyazhnyy <john.koepi@gmail.com>"
 ]
+edition = "2021"
 
 description   = "#[derive(Hashable)] for light merkle tree Hashable"
 license       = "BSD-3-Clause"
@@ -20,7 +21,7 @@ proc-macro = true
 [dependencies]
 syn = "0.11.11"
 quote = "0.3.15"
-merkle_light = { path = "../merkle", version = "^0.3" }
+merkle_light = { path = "../merkle", version = "^0.4" }
 
 [package.metadata.release]
 sign-commit = true
